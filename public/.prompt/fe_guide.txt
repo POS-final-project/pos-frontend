@@ -1,0 +1,77 @@
+SuperAdmin (Owner)
+1. Dashboard
+Halaman utama setelah login. Menampilkan overview seluruh bisnis lintas toko — total revenue hari ini, total transaksi, produk stok menipis, grafik penjualan, top produk terlaris, feed transaksi terbaru, dan preview AI insight terbaru.
+2. Transaksi
+Melihat seluruh transaksi dari semua toko. Bisa filter berdasarkan toko, tanggal, status, metode pembayaran. Bisa klik transaksi untuk lihat detail item. Ada tombol export ke PDF/XLS.
+3. Produk
+Melihat semua produk global. Bisa tambah produk baru, edit nama/SKU/kategori/foto, kelola variant per produk (tambah, edit, hapus variant beserta harganya), dan nonaktifkan/hapus produk.
+4. Kategori
+Mengelola kategori produk yang bersifat global. Bisa tambah, edit, dan hapus kategori. Ditampilkan sebagai list sederhana.
+5. Inventory
+Melihat stok semua produk lintas toko. Bisa filter per toko dan per produk. Bisa melakukan restock manual, adjustment stok keluar, dan set batas low stock threshold per produk per toko. Ada riwayat pergerakan stok lengkap dengan sumber perubahan.
+6. Transfer Stok
+Melihat semua history transfer stok antar toko (incoming dan outgoing dari semua cabang). Bisa lihat detail per transfer termasuk item-item di dalamnya. Bisa approve, reject, dan cancel transfer dari toko manapun tanpa batasan kepemilikan toko.
+7. Kasir
+Halaman POS untuk melakukan transaksi. Pilih produk/variant, atur qty, pilih pelanggan (opsional), pilih metode pembayaran, proses transaksi, dan cetak struk.
+8. Refund
+Melihat semua daftar refund lintas toko. Bisa approve atau reject refund yang diajukan kasir/admin. Melihat detail item yang direfund.
+9. Toko
+Mengelola semua cabang toko — tambah toko baru, edit data toko, hapus toko, assign/remove admin dan staff ke toko, dan lihat daftar staff per toko.
+10. Pelanggan
+Melihat semua data pelanggan global. Bisa tambah, edit, dan lihat riwayat transaksi per pelanggan.
+11. AI Assistant
+Berinteraksi dengan chatbot untuk tanya insight bisnis lintas toko. Melihat history chat per sesi. Melihat insight terjadwal (harian, mingguan, bulanan, tahunan) dengan rekomendasi aksi.
+12. Notifikasi
+Melihat semua notifikasi: low stock alert, transfer masuk/dikonfirmasi/ditolak, hasil insight AI, refund, dan notifikasi sistem. Bisa tandai baca, hapus, dan mark all as read.
+13. Log & Audit
+Melihat seluruh log aktivitas sistem — siapa mengubah apa, kapan, nilai sebelum dan sesudah. Bisa filter berdasarkan user, tipe aksi, modul, dan rentang tanggal.
+14. Laporan
+Membuat export laporan — transaksi, produk, inventory, pergerakan stok. Pilih filter (toko, tanggal, format PDF/XLS) lalu download langsung.
+15. Profile
+Melihat dan mengedit data profil sendiri — nama, email, foto profil, dan ganti password.
+
+Admin (Manager Toko)
+1. Dashboard
+Overview toko yang dikelola — revenue hari ini, transaksi hari ini, stok menipis di toko ini, grafik penjualan toko, top produk terlaris, feed transaksi terbaru, dan preview AI insight toko.
+2. Transaksi
+Melihat semua transaksi toko sendiri. Filter berdasarkan tanggal, status, kasir, metode pembayaran. Lihat detail transaksi. Export data transaksi.
+3. Produk
+Melihat semua produk global dan mengelolanya — tambah produk baru, edit produk, kelola variant, nonaktifkan produk. Sama seperti SuperAdmin tapi produk yang dibuat berlaku global.
+4. Kategori
+Melihat daftar kategori global (read only — tidak bisa tambah/edit/hapus karena kategori dikelola SuperAdmin).
+5. Inventory
+Melihat stok produk di toko sendiri. Bisa restock manual, adjustment stok keluar, set low stock threshold. Melihat riwayat pergerakan stok toko ini.
+6. Transfer Stok
+Membuat permintaan transfer stok ke toko lain. Melihat transfer yang dikirim (outgoing) dan yang diterima (incoming). Bisa konfirmasi terima atau tolak transfer masuk. Bisa batalkan transfer keluar yang masih pending.
+7. Kasir
+Halaman POS — sama persis seperti SuperAdmin. Melakukan transaksi, pilih produk/variant, proses pembayaran, cetak struk.
+8. Refund
+Melihat daftar refund di toko ini. Bisa approve atau reject refund. Kasir di toko ini bisa ajukan refund dan Admin yang menyetujui.
+9. Toko
+Melihat dan mengedit data toko sendiri — nama, alamat, nomor telepon. Bisa assign atau remove staff/kasir dari tokonya. Melihat daftar staff aktif di toko ini.
+10. Pelanggan
+Melihat semua data pelanggan global. Bisa tambah dan edit pelanggan. Lihat riwayat transaksi per pelanggan.
+11. AI Assistant
+Berinteraksi dengan chatbot untuk tanya insight toko sendiri. History chat per sesi. Insight terjadwal khusus data toko ini.
+12. Notifikasi
+Notifikasi yang relevan untuk toko ini — low stock, transfer, insight AI, refund. Bisa tandai baca, hapus, mark all as read.
+13. Laporan
+Export laporan toko sendiri — transaksi, produk, inventory, pergerakan stok. Pilih filter dan format lalu download.
+14. Profile
+Melihat dan mengedit profil sendiri — nama, email, foto, ganti password.
+
+User / Kasir
+1. Kasir
+Halaman utama dan paling sering dipakai. Melakukan transaksi — cari dan pilih produk, atur qty, pilih variant, pilih pelanggan (opsional), pilih metode pembayaran, proses transaksi, cetak struk. Bisa update status transaksi dan ajukan refund.
+2. Transaksi
+Melihat transaksi hari ini dan transaksi terbaru milik kasir ini. Lihat detail transaksi. Ajukan refund untuk transaksi yang sudah completed.
+3. Produk
+Melihat daftar produk dan variantnya — nama, SKU, harga, kategori. Bisa tambah, edit, dan hapus produk. Tidak bisa kelola kategori.
+4. Inventory
+Melihat stok produk di toko tempat bertugas. Melihat riwayat pergerakan stok. Bisa konfirmasi penerimaan transfer stok masuk. Tidak bisa restock manual atau set threshold.
+5. Profile
+Melihat dan mengedit profil sendiri — nama, email, foto profil, dan ganti password.
+
+
+KETERANGAN :
+1. Profile juga ada di bagian navbar. di bagian kanan munculkan logo avatar/foto profile. saat ditekan akan muncul dropdown profile singkat dan tombol profile yang baru akan masuk ke halaman profile

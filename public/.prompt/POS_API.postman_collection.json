@@ -1,0 +1,1365 @@
+{
+  "info": {
+    "name": "POS Backend API",
+    "description": "Koleksi endpoint API untuk sistem POS — auth, profile, shops, categories, products, inventory, transfers, customers, transactions, refunds, audit-logs.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:5000", "type": "string" },
+    { "key": "accessToken", "value": "", "type": "string" },
+    { "key": "refreshToken", "value": "", "type": "string" },
+    { "key": "shopId", "value": "", "type": "string" },
+    { "key": "userId", "value": "", "type": "string" },
+    { "key": "productId", "value": "", "type": "string" },
+    { "key": "variantId", "value": "", "type": "string" },
+    { "key": "categoryId", "value": "", "type": "string" },
+    { "key": "inventoryId", "value": "", "type": "string" },
+    { "key": "transferId", "value": "", "type": "string" },
+    { "key": "customerId", "value": "", "type": "string" },
+    { "key": "transactionId", "value": "", "type": "string" },
+    { "key": "transactionItemId", "value": "", "type": "string" },
+    { "key": "refundId", "value": "", "type": "string" }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }]
+  },
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.success) {",
+                  "  pm.collectionVariables.set('accessToken', json.data.accessToken);",
+                  "  pm.collectionVariables.set('refreshToken', json.data.refreshToken);",
+                  "  pm.test('Login berhasil & token tersimpan', () => pm.response.to.have.status(200));",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"superadmin@pos.com\",\n  \"password\": \"Password123!\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "login"]
+            }
+          }
+        },
+        {
+          "name": "Refresh Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.success) {",
+                  "  pm.collectionVariables.set('accessToken', json.data.accessToken);",
+                  "  pm.test('Access token diperbarui', () => pm.response.to.have.status(200));",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/refresh",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "refresh"]
+            }
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/logout",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "logout"]
+            }
+          }
+        },
+        {
+          "name": "Register Admin",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Admin Toko A\",\n  \"email\": \"admin@toko-a.com\",\n  \"password\": \"Password123!\",\n  \"shopId\": \"{{shopId}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/register/admin",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "register", "admin"]
+            }
+          }
+        },
+        {
+          "name": "Register User",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Kasir 1\",\n  \"email\": \"kasir1@toko-a.com\",\n  \"password\": \"Password123!\",\n  \"shopId\": \"{{shopId}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/register/user",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "register", "user"]
+            }
+          }
+        },
+        {
+          "name": "Forgot Password",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"user@pos.com\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/forgot-password",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "forgot-password"]
+            }
+          }
+        },
+        {
+          "name": "Reset Password",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"token\": \"<token_dari_email>\",\n  \"newPassword\": \"NewPassword123!\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/reset-password",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "reset-password"]
+            }
+          }
+        },
+        {
+          "name": "Change Password",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"currentPassword\": \"Password123!\",\n  \"newPassword\": \"NewPassword123!\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/change-password",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "change-password"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Profile",
+      "item": [
+        {
+          "name": "Get My Profile",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/profile",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "profile"]
+            }
+          }
+        },
+        {
+          "name": "Update Profile",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Nama Baru\",\n  \"email\": \"email-baru@pos.com\",\n  \"phone\": \"08123456789\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/profile",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "profile"]
+            }
+          }
+        },
+        {
+          "name": "Update Profile Photo",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "photo",
+                  "type": "file",
+                  "src": "",
+                  "description": "Pilih file gambar (jpeg/png/webp, maks 2MB)"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/profile/photo",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "profile", "photo"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Shops",
+      "item": [
+        {
+          "name": "List Shops",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/shops?page=1&limit=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "shops"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "20" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create Shop",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.success) pm.collectionVariables.set('shopId', json.data.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Toko A\",\n  \"address\": \"Jl. Merdeka No. 1\",\n  \"phone\": \"02112345678\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/shops",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "shops"]
+            }
+          }
+        },
+        {
+          "name": "Get Shop Detail",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/shops/{{shopId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "shops", "{{shopId}}"]
+            }
+          }
+        },
+        {
+          "name": "Update Shop",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Toko A Updated\",\n  \"address\": \"Jl. Merdeka No. 2\",\n  \"phone\": \"02198765432\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/shops/{{shopId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "shops", "{{shopId}}"]
+            }
+          }
+        },
+        {
+          "name": "Delete Shop",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/shops/{{shopId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "shops", "{{shopId}}"]
+            }
+          }
+        },
+        {
+          "name": "List Shop Staff",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/shops/{{shopId}}/staff",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "shops", "{{shopId}}", "staff"]
+            }
+          }
+        },
+        {
+          "name": "Assign Staff to Shop",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"{{userId}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/shops/{{shopId}}/staff",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "shops", "{{shopId}}", "staff"]
+            }
+          }
+        },
+        {
+          "name": "Remove Staff from Shop",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/shops/{{shopId}}/staff/{{userId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "shops", "{{shopId}}", "staff", "{{userId}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Categories",
+      "item": [
+        {
+          "name": "List Categories",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/categories?page=1&limit=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "categories"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "20" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create Category",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.success) pm.collectionVariables.set('categoryId', json.data.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Minuman\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/categories",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "categories"]
+            }
+          }
+        },
+        {
+          "name": "Update Category",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Minuman Updated\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/categories/{{categoryId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "categories", "{{categoryId}}"]
+            }
+          }
+        },
+        {
+          "name": "Delete Category",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/categories/{{categoryId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "categories", "{{categoryId}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Products",
+      "item": [
+        {
+          "name": "List Products",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/products?page=1&limit=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "products"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "20" },
+                {
+                  "key": "search",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Cari nama produk"
+                },
+                { "key": "categoryId", "value": "", "disabled": true },
+                { "key": "isActive", "value": "true", "disabled": true }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create Product",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.success) {",
+                  "  pm.collectionVariables.set('productId', json.data.id);",
+                  "  if (json.data.variants && json.data.variants.length > 0) {",
+                  "    pm.collectionVariables.set('variantId', json.data.variants[0].id);",
+                  "  }",
+                  "  pm.test('Produk berhasil dibuat', () => pm.response.to.have.status(201));",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "name", "type": "text", "value": "Aqua 600ml" },
+                {
+                  "key": "description",
+                  "type": "text",
+                  "value": "Air mineral 600ml"
+                },
+                {
+                  "key": "category_id",
+                  "type": "text",
+                  "value": "{{categoryId}}"
+                },
+                {
+                  "key": "variants[0][name]",
+                  "type": "text",
+                  "value": "Default"
+                },
+                {
+                  "key": "variants[0][sku]",
+                  "type": "text",
+                  "value": "AQU-600-DEFAULT"
+                },
+                {
+                  "key": "variants[0][price]",
+                  "type": "text",
+                  "value": "3000"
+                },
+                {
+                  "key": "variants[0][image]",
+                  "type": "file",
+                  "src": "",
+                  "description": "Pilih file gambar variant (jpeg/png/webp, maks 2MB)"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/products",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "products"]
+            }
+          }
+        },
+        {
+          "name": "Get Product Detail",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/products/{{productId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "products", "{{productId}}"]
+            }
+          }
+        },
+        {
+          "name": "Update Product",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Aqua 600ml Updated\",\n  \"description\": \"Deskripsi baru\",\n  \"is_active\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/products/{{productId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "products", "{{productId}}"]
+            }
+          }
+        },
+        {
+          "name": "Delete Product",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/products/{{productId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "products", "{{productId}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Variants",
+      "item": [
+        {
+          "name": "List Variants",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/products/{{productId}}/variants?page=1&limit=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "products", "{{productId}}", "variants"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "20" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create Variant",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.success) pm.collectionVariables.set('variantId', json.data.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "name", "type": "text", "value": "Default" },
+                { "key": "sku", "type": "text", "value": "AQU-600-DEFAULT" },
+                { "key": "price", "type": "text", "value": "3000" },
+                {
+                  "key": "image",
+                  "type": "file",
+                  "src": "",
+                  "description": "Pilih file gambar variant (opsional)"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/products/{{productId}}/variants",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "products", "{{productId}}", "variants"]
+            }
+          }
+        },
+        {
+          "name": "Get Variant Detail",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/products/{{productId}}/variants/{{variantId}}",
+              "host": ["{{baseUrl}}"],
+              "path": [
+                "api",
+                "products",
+                "{{productId}}",
+                "variants",
+                "{{variantId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Update Variant",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "name", "type": "text", "value": "Default Updated" },
+                { "key": "price", "type": "text", "value": "3500" },
+                { "key": "is_active", "type": "text", "value": "true" },
+                {
+                  "key": "image",
+                  "type": "file",
+                  "src": "",
+                  "description": "Pilih file gambar baru variant (opsional)"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/products/{{productId}}/variants/{{variantId}}",
+              "host": ["{{baseUrl}}"],
+              "path": [
+                "api",
+                "products",
+                "{{productId}}",
+                "variants",
+                "{{variantId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Delete Variant",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/products/{{productId}}/variants/{{variantId}}",
+              "host": ["{{baseUrl}}"],
+              "path": [
+                "api",
+                "products",
+                "{{productId}}",
+                "variants",
+                "{{variantId}}"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Inventory",
+      "item": [
+        {
+          "name": "List Inventory",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/inventory?shopId={{shopId}}&page=1&limit=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "inventory"],
+              "query": [
+                {
+                  "key": "shopId",
+                  "value": "{{shopId}}",
+                  "description": "Opsional untuk superAdmin"
+                },
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "20" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Inventory by Product",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/inventory/products/{{productId}}?shopId={{shopId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "inventory", "products", "{{productId}}"],
+              "query": [{ "key": "shopId", "value": "{{shopId}}" }]
+            }
+          }
+        },
+        {
+          "name": "Restock (Stock In)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.success) pm.collectionVariables.set('inventoryId', json.data.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"shop_id\": \"{{shopId}}\",\n  \"product_variant_id\": \"{{variantId}}\",\n  \"qty\": 50,\n  \"cost_price\": 2500,\n  \"note\": \"Restock dari supplier\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/inventory/restock",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "inventory", "restock"]
+            }
+          }
+        },
+        {
+          "name": "Adjustment Out (Stock Out)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"shop_id\": \"{{shopId}}\",\n  \"product_variant_id\": \"{{variantId}}\",\n  \"qty\": 5,\n  \"note\": \"Barang rusak/expired\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/inventory/adjustment-out",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "inventory", "adjustment-out"]
+            }
+          }
+        },
+        {
+          "name": "Set Low Stock Threshold",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"low_stock_threshold\": 10\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/inventory/{{inventoryId}}/threshold",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "inventory", "{{inventoryId}}", "threshold"]
+            }
+          }
+        },
+        {
+          "name": "Get Stock Movement History",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/inventory/movements?shopId={{shopId}}&page=1&limit=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "inventory", "movements"],
+              "query": [
+                { "key": "shopId", "value": "{{shopId}}" },
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "20" },
+                {
+                  "key": "type",
+                  "value": "restock",
+                  "disabled": true,
+                  "description": "restock | adjustment | transfer_in | transfer_out | sale | refund"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Transfers",
+      "item": [
+        {
+          "name": "Create Transfer",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.success) pm.collectionVariables.set('transferId', json.data.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"from_shop_id\": \"{{shopId}}\",\n  \"to_shop_id\": \"<id_toko_tujuan>\",\n  \"note\": \"Transfer stok mingguan\",\n  \"items\": [\n    {\n      \"product_variant_id\": \"{{variantId}}\",\n      \"qty\": 10,\n      \"note\": \"\"\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/transfers",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "transfers"]
+            }
+          }
+        },
+        {
+          "name": "List Outgoing Transfers",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/transfers/outgoing?shopId={{shopId}}&page=1&limit=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "transfers", "outgoing"],
+              "query": [
+                { "key": "shopId", "value": "{{shopId}}" },
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "20" },
+                {
+                  "key": "status",
+                  "value": "pending",
+                  "disabled": true,
+                  "description": "pending | approved | rejected | cancelled"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "List Incoming Transfers",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/transfers/incoming?shopId={{shopId}}&page=1&limit=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "transfers", "incoming"],
+              "query": [
+                { "key": "shopId", "value": "{{shopId}}" },
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "20" },
+                { "key": "status", "value": "pending", "disabled": true }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Transfer Detail",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/transfers/{{transferId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "transfers", "{{transferId}}"]
+            }
+          }
+        },
+        {
+          "name": "Get Transfer Items",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/transfers/{{transferId}}/items",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "transfers", "{{transferId}}", "items"]
+            }
+          }
+        },
+        {
+          "name": "Approve Transfer",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "body": { "mode": "raw", "raw": "" },
+            "url": {
+              "raw": "{{baseUrl}}/api/transfers/{{transferId}}/approve",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "transfers", "{{transferId}}", "approve"]
+            }
+          }
+        },
+        {
+          "name": "Reject Transfer",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "body": { "mode": "raw", "raw": "" },
+            "url": {
+              "raw": "{{baseUrl}}/api/transfers/{{transferId}}/reject",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "transfers", "{{transferId}}", "reject"]
+            }
+          }
+        },
+        {
+          "name": "Cancel Transfer",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "body": { "mode": "raw", "raw": "" },
+            "url": {
+              "raw": "{{baseUrl}}/api/transfers/{{transferId}}/cancel",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "transfers", "{{transferId}}", "cancel"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Customers",
+      "item": [
+        {
+          "name": "List Customers",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/customers?page=1&limit=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "customers"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "20" },
+                {
+                  "key": "search",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Cari berdasarkan nama, telepon, atau email"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create Customer",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.success) pm.collectionVariables.set('customerId', json.data.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Budi Santoso\",\n  \"phone\": \"081234567890\",\n  \"email\": \"budi@email.com\",\n  \"address\": \"Jl. Sudirman No. 10\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/customers",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "customers"]
+            }
+          }
+        },
+        {
+          "name": "Get Customer Detail",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/customers/{{customerId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "customers", "{{customerId}}"]
+            }
+          }
+        },
+        {
+          "name": "Update Customer",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Budi Santoso Updated\",\n  \"phone\": \"089876543210\",\n  \"address\": \"Jl. Sudirman No. 99\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/customers/{{customerId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "customers", "{{customerId}}"]
+            }
+          }
+        },
+        {
+          "name": "Delete Customer",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/customers/{{customerId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "customers", "{{customerId}}"]
+            }
+          }
+        },
+        {
+          "name": "Get Customer Transaction History",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/customers/{{customerId}}/transactions?page=1&limit=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "customers", "{{customerId}}", "transactions"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "20" }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Transactions",
+      "item": [
+        {
+          "name": "List Transactions",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/transactions?shopId={{shopId}}&page=1&limit=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "transactions"],
+              "query": [
+                {
+                  "key": "shopId",
+                  "value": "{{shopId}}",
+                  "description": "Opsional untuk superAdmin"
+                },
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "20" },
+                {
+                  "key": "status",
+                  "value": "completed",
+                  "disabled": true,
+                  "description": "pending | completed | cancelled"
+                },
+                {
+                  "key": "payment_method",
+                  "value": "cash",
+                  "disabled": true,
+                  "description": "cash | transfer | qris | credit"
+                },
+                { "key": "customer_id", "value": "", "disabled": true },
+                {
+                  "key": "user_id",
+                  "value": "{{userId}}",
+                  "disabled": true,
+                  "description": "Filter transaksi per kasir (user_id)"
+                },
+                { "key": "date_from", "value": "2026-01-01", "disabled": true },
+                { "key": "date_to", "value": "2026-12-31", "disabled": true }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create Transaction",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.success) {",
+                  "  pm.collectionVariables.set('transactionId', json.data.id);",
+                  "  if (json.data.items && json.data.items.length > 0) {",
+                  "    pm.collectionVariables.set('transactionItemId', json.data.items[0].id);",
+                  "  }",
+                  "  pm.test('Transaksi berhasil dibuat', () => pm.response.to.have.status(201));",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"shop_id\": \"{{shopId}}\",\n  \"customer_id\": \"{{customerId}}\",\n  \"payment_method\": \"cash\",\n  \"note\": \"Transaksi test\",\n  \"items\": [\n    {\n      \"product_variant_id\": \"{{variantId}}\",\n      \"qty\": 2,\n      \"price\": 3000\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/transactions",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "transactions"]
+            }
+          }
+        },
+        {
+          "name": "Get Transaction Detail",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/transactions/{{transactionId}}?shopId={{shopId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "transactions", "{{transactionId}}"],
+              "query": [
+                {
+                  "key": "shopId",
+                  "value": "{{shopId}}",
+                  "description": "Opsional untuk superAdmin"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Cancel Transaction",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "body": { "mode": "raw", "raw": "" },
+            "url": {
+              "raw": "{{baseUrl}}/api/transactions/{{transactionId}}/cancel?shopId={{shopId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "transactions", "{{transactionId}}", "cancel"],
+              "query": [
+                {
+                  "key": "shopId",
+                  "value": "{{shopId}}",
+                  "description": "Opsional untuk superAdmin"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Refunds",
+      "item": [
+        {
+          "name": "List Refunds",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/refunds?shopId={{shopId}}&page=1&limit=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "refunds"],
+              "query": [
+                {
+                  "key": "shopId",
+                  "value": "{{shopId}}",
+                  "description": "Opsional untuk superAdmin"
+                },
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "20" },
+                {
+                  "key": "status",
+                  "value": "pending",
+                  "disabled": true,
+                  "description": "pending | approved | rejected"
+                },
+                {
+                  "key": "transaction_id",
+                  "value": "{{transactionId}}",
+                  "disabled": true
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create Refund",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.success) {",
+                  "  pm.collectionVariables.set('refundId', json.data.id);",
+                  "  pm.test('Refund berhasil dibuat', () => pm.response.to.have.status(201));",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"transaction_id\": \"{{transactionId}}\",\n  \"reason\": \"Produk cacat/tidak sesuai\",\n  \"items\": [\n    {\n      \"transaction_item_id\": \"{{transactionItemId}}\",\n      \"qty\": 1\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/refunds",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "refunds"]
+            }
+          }
+        },
+        {
+          "name": "Get Refund Detail",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/refunds/{{refundId}}?shopId={{shopId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "refunds", "{{refundId}}"],
+              "query": [
+                {
+                  "key": "shopId",
+                  "value": "{{shopId}}",
+                  "description": "Opsional untuk superAdmin"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Approve Refund",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "body": { "mode": "raw", "raw": "" },
+            "url": {
+              "raw": "{{baseUrl}}/api/refunds/{{refundId}}/approve?shopId={{shopId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "refunds", "{{refundId}}", "approve"],
+              "query": [
+                {
+                  "key": "shopId",
+                  "value": "{{shopId}}",
+                  "description": "Opsional untuk superAdmin"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Reject Refund",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "body": { "mode": "raw", "raw": "" },
+            "url": {
+              "raw": "{{baseUrl}}/api/refunds/{{refundId}}/reject?shopId={{shopId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "refunds", "{{refundId}}", "reject"],
+              "query": [
+                {
+                  "key": "shopId",
+                  "value": "{{shopId}}",
+                  "description": "Opsional untuk superAdmin"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Audit Logs",
+      "item": [
+        {
+          "name": "List Audit Logs",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/audit-logs?shopId={{shopId}}&page=1&limit=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "audit-logs"],
+              "query": [
+                {
+                  "key": "shopId",
+                  "value": "{{shopId}}",
+                  "description": "Opsional untuk superAdmin"
+                },
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "20" },
+                {
+                  "key": "entity_type",
+                  "value": "transaction",
+                  "disabled": true,
+                  "description": "transaction | product | user | dll"
+                },
+                {
+                  "key": "action",
+                  "value": "create",
+                  "disabled": true,
+                  "description": "create | update | delete | login | logout"
+                },
+                { "key": "user_id", "value": "", "disabled": true },
+                { "key": "date_from", "value": "2026-01-01", "disabled": true },
+                { "key": "date_to", "value": "2026-12-31", "disabled": true }
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
