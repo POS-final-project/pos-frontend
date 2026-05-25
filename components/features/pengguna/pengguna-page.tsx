@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { Search, Pencil, UserCog, Plus, Eye, EyeOff } from "lucide-react";
+import { Pagination } from "@/components/ui/pagination";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -32,6 +33,7 @@ import { TableSkeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/components/ui/toast";
 import { api } from "@/lib/api";
 import { cn } from "@/lib/utils";
+import { PageHeader } from "@/components/layout/page-header";
 
 type Shop = { id: string; name: string };
 
@@ -56,14 +58,15 @@ function extractUsers(data: unknown): { items: UserItem[]; totalPages: number } 
   if (Array.isArray(data)) return { items: data as UserItem[], totalPages: 1 };
   if (data && typeof data === "object") {
     const d = data as Record<string, unknown>;
+    if (Array.isArray(d.data)) {
+      const meta = d.meta as Record<string, unknown> | undefined;
+      const totalPages = typeof meta?.totalPages === "number" ? meta.totalPages : 1;
+      return { items: d.data as UserItem[], totalPages };
+    }
     if (Array.isArray(d.rows)) {
       const p = d as unknown as PaginatedResponse;
-      return {
-        items: p.rows ?? [],
-        totalPages: p.totalPages ?? 1,
-      };
+      return { items: p.rows ?? [], totalPages: p.totalPages ?? 1 };
     }
-    if (Array.isArray(d.data)) return { items: d.data as UserItem[], totalPages: 1 };
   }
   return { items: [], totalPages: 1 };
 }
@@ -89,8 +92,8 @@ function UserAvatar({ name, imageUrl }: { name: string; imageUrl?: string | null
     .toUpperCase();
 
   return (
-    <div className="relative w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center flex-shrink-0 overflow-hidden">
-      <span className="text-xs font-semibold text-indigo-700">{initials}</span>
+    <div className="relative w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0 overflow-hidden">
+      <span className="text-xs font-semibold text-amber-700">{initials}</span>
       {imageUrl && (
         <img
           src={`/backend${imageUrl}`}
@@ -159,10 +162,10 @@ export function PenggunaPage() {
       params.set("page", String(page));
       params.set("limit", String(LIMIT));
 
-      const res = await api.get<{ success: boolean; data: unknown }>(
+      const res = await api.get<{ success: boolean; data: unknown; meta?: Record<string, unknown> }>(
         `/api/users?${params.toString()}`
       );
-      const { items, totalPages: tp } = extractUsers(res.data);
+      const { items, totalPages: tp } = extractUsers(res);
       setUsers(items);
       setTotalPages(tp);
     } catch (err) {
@@ -276,19 +279,17 @@ export function PenggunaPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-semibold text-slate-900">Pengguna</h1>
-          <p className="text-sm text-slate-500 mt-0.5">
-            Kelola akun pengguna, role, dan status aktif
-          </p>
-        </div>
-        <Button onClick={openRegister} className="gap-2">
-          <Plus className="w-4 h-4" />
-          Tambah Pengguna
-        </Button>
-      </div>
+      <PageHeader
+        title="Pengguna"
+        description="Kelola akun pengguna, role, dan status aktif"
+        count={loading ? undefined : users.length}
+        action={
+          <Button onClick={openRegister} className="gap-2">
+            <Plus className="w-4 h-4" />
+            Tambah Pengguna
+          </Button>
+        }
+      />
 
       {error && (
         <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-4 py-3">
@@ -430,7 +431,7 @@ export function PenggunaPage() {
                       variant="ghost"
                       size="icon-sm"
                       onClick={() => openEdit(u)}
-                      className="text-slate-400 hover:text-indigo-600"
+                      className="text-slate-400 hover:text-amber-600"
                       title="Edit pengguna"
                     >
                       <Pencil className="w-3.5 h-3.5" />
@@ -443,59 +444,12 @@ export function PenggunaPage() {
         )}
       </div>
 
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="flex items-center justify-between text-sm">
-          <span className="text-slate-500 text-xs">
-            Halaman <span className="font-medium text-slate-700">{page}</span> dari{" "}
-            <span className="font-medium text-slate-700">{totalPages}</span>
-          </span>
-          <div className="flex items-center gap-1">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-              disabled={page <= 1 || loading}
-              className="h-8 px-2.5 gap-1"
-            >
-              ‹ Sebelumnya
-            </Button>
-            {(() => {
-              const delta = 2;
-              const start = Math.max(1, page - delta);
-              const end = Math.min(totalPages, page + delta);
-              const pages: (number | "...")[] = [];
-              if (start > 1) { pages.push(1); if (start > 2) pages.push("..."); }
-              for (let p = start; p <= end; p++) pages.push(p);
-              if (end < totalPages) { if (end < totalPages - 1) pages.push("..."); pages.push(totalPages); }
-              return pages.map((p, idx) =>
-                p === "..." ? (
-                  <span key={`e-${idx}`} className="px-1 text-slate-400 text-xs">…</span>
-                ) : (
-                  <Button
-                    key={p}
-                    variant={p === page ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => setPage(p)}
-                    className={cn("h-8 w-8 p-0 text-xs", p === page && "pointer-events-none")}
-                  >
-                    {p}
-                  </Button>
-                )
-              );
-            })()}
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-              disabled={page >= totalPages || loading}
-              className="h-8 px-2.5 gap-1"
-            >
-              Selanjutnya ›
-            </Button>
-          </div>
-        </div>
-      )}
+      <Pagination
+        page={page}
+        totalPages={totalPages}
+        onPageChange={setPage}
+        pageSize={LIMIT}
+      />
 
       {/* Register Dialog */}
       <Dialog open={regDialog} onOpenChange={setRegDialog}>

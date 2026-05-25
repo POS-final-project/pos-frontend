@@ -62,7 +62,7 @@ export function NewSessionModal({
               className={cn(
                 "flex flex-col items-center gap-2 rounded-xl border-2 p-4 text-center transition-all",
                 scope === "global"
-                  ? "border-indigo-500 bg-indigo-50 text-indigo-700"
+                  ? "border-amber-500 bg-amber-50 text-amber-700"
                   : "border-slate-200 text-slate-500 hover:border-slate-300 hover:bg-slate-50",
               )}
             >
@@ -79,7 +79,7 @@ export function NewSessionModal({
               className={cn(
                 "flex flex-col items-center gap-2 rounded-xl border-2 p-4 text-center transition-all",
                 scope === "shop"
-                  ? "border-indigo-500 bg-indigo-50 text-indigo-700"
+                  ? "border-amber-500 bg-amber-50 text-amber-700"
                   : "border-slate-200 text-slate-500 hover:border-slate-300 hover:bg-slate-50",
               )}
             >
@@ -124,7 +124,7 @@ export function NewSessionModal({
             size="sm"
             onClick={handleSubmit}
             disabled={scope === "shop" && !shopId}
-            className="bg-indigo-600 hover:bg-indigo-700 text-white"
+            className="bg-amber-500 hover:bg-amber-600 text-amber-950"
           >
             Mulai Percakapan
           </Button>

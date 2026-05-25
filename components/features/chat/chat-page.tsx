@@ -1,163 +1,201 @@
 "use client";
 
-import { useState } from "react";
-import { MainContainer } from "@chatscope/chat-ui-kit-react";
-import { Bot, Globe, Store } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Bot, Globe, Store, Loader2, AlertTriangle, WifiOff, X, RefreshCw } from "lucide-react";
 import { SessionSidebar } from "./session-sidebar";
 import { ChatWindow } from "./chat-window";
 import { NewSessionModal } from "./new-session-modal";
+import { aiChatApi, type AiSession, type QueryResult, type AiMessage } from "@/lib/aiChat";
+import { api } from "@/lib/api";
 
-type Session = {
-  id: string;
-  scope: "global" | "shop";
-  shop_id: string | null;
-  Shop: { name: string } | null;
-  last_active_at: string;
-};
+type Shop = { id: string; name: string };
 
 type ChatMessage = {
   id?: string;
   role: "user" | "assistant";
   content: string;
-  tableData?: {
-    columns: string[];
-    rows: (string | number | null)[][];
-  } | null;
+  // undefined = pesan lama dari history DB (tidak ditampilkan di chat-window)
+  // [] = balasan tanpa data (small talk)
+  // [...] = balasan dengan satu atau lebih hasil query
+  queries?: QueryResult[];
   created_at: string;
 };
 
-// ── Mock data ─────────────────────────────────────────────────────────────────
+function parseAssistantMessage(m: AiMessage): { content: string; queries: QueryResult[] } {
+  if (m.role !== "assistant") return { content: m.content, queries: [] };
+  try {
+    const parsed = JSON.parse(m.content);
+    if (parsed._v === 2 && typeof parsed.reply === "string") {
+      return { content: parsed.reply, queries: parsed.queries ?? [] };
+    }
+  } catch {
+    // bukan JSON — pesan lama, tampilkan apa adanya
+  }
+  return { content: m.content, queries: [] };
+}
 
-const MOCK_SHOPS = [
-  { id: "shop1", name: "Toko Jakarta Pusat" },
-  { id: "shop2", name: "Toko Bandung" },
-  { id: "shop3", name: "Toko Surabaya" },
-];
+function isServiceDown(msg: string) {
+  return (
+    msg.toLowerCase().includes("service") ||
+    msg.toLowerCase().includes("dihubungi") ||
+    msg.toLowerCase().includes("502") ||
+    msg.toLowerCase().includes("tersedia")
+  );
+}
 
-const MOCK_SESSIONS: Session[] = [
-  {
-    id: "sess1",
-    scope: "global",
-    shop_id: null,
-    Shop: null,
-    last_active_at: new Date(Date.now() - 10 * 60 * 1000).toISOString(),
-  },
-  {
-    id: "sess2",
-    scope: "shop",
-    shop_id: "shop1",
-    Shop: { name: "Toko Jakarta Pusat" },
-    last_active_at: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-  },
-];
+interface ErrorBannerProps {
+  message: string;
+  onDismiss: () => void;
+  onRetry?: () => void;
+}
 
-const MOCK_MESSAGES: Record<string, ChatMessage[]> = {
-  sess1: [
-    {
-      id: "m1",
-      role: "user",
-      content: "Produk apa yang paling laris bulan ini?",
-      created_at: new Date(Date.now() - 9 * 60 * 1000).toISOString(),
-    },
-    {
-      id: "m2",
-      role: "assistant",
-      content:
-        "Berdasarkan data transaksi bulan Mei 2026, berikut 5 produk terlaris di semua toko:",
-      tableData: {
-        columns: ["Produk", "Toko", "Total Terjual", "Pendapatan"],
-        rows: [
-          ["Kopi Arabica 250gr", "Semua Toko", "342", "Rp 8.550.000"],
-          ["Teh Hijau Organik", "Semua Toko", "278", "Rp 5.560.000"],
-          ["Milo Sachet 3in1", "Semua Toko", "241", "Rp 3.615.000"],
-          ["Susu UHT Full Cream", "Semua Toko", "198", "Rp 4.950.000"],
-          ["Roti Tawar Gandum", "Semua Toko", "165", "Rp 2.475.000"],
-        ],
-      },
-      created_at: new Date(Date.now() - 8 * 60 * 1000).toISOString(),
-    },
-    {
-      id: "m3",
-      role: "user",
-      content: "Berapa total pendapatan bulan ini dibanding bulan lalu?",
-      created_at: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
-    },
-    {
-      id: "m4",
-      role: "assistant",
-      content:
-        "Total pendapatan bulan Mei 2026 sebesar Rp 128.450.000, naik 12,3% dibanding April 2026 (Rp 114.380.000). Kenaikan terbesar berasal dari kategori Minuman (+18%) dan Snack (+15%).",
-      tableData: null,
-      created_at: new Date(Date.now() - 4 * 60 * 1000).toISOString(),
-    },
-  ],
-  sess2: [
-    {
-      id: "m5",
-      role: "user",
-      content: "Siapa pelanggan paling aktif di toko ini bulan ini?",
-      created_at: new Date(Date.now() - 90 * 60 * 1000).toISOString(),
-    },
-    {
-      id: "m6",
-      role: "assistant",
-      content:
-        "Berikut 3 pelanggan dengan frekuensi pembelian tertinggi di Toko Jakarta Pusat bulan Mei 2026:",
-      tableData: {
-        columns: ["Pelanggan", "Transaksi", "Total Belanja"],
-        rows: [
-          ["Budi Santoso", "14", "Rp 2.340.000"],
-          ["Siti Rahayu", "11", "Rp 1.870.000"],
-          ["Ahmad Fauzi", "9", "Rp 1.520.000"],
-        ],
-      },
-      created_at: new Date(Date.now() - 89 * 60 * 1000).toISOString(),
-    },
-  ],
-};
-
-// ── Component ──────────────────────────────────────────────────────────────────
+function ErrorBanner({ message, onDismiss, onRetry }: ErrorBannerProps) {
+  const down = isServiceDown(message);
+  return (
+    <div
+      className={`flex items-start gap-3 px-4 py-3 border-b flex-shrink-0 ${
+        down
+          ? "bg-amber-50 border-amber-200"
+          : "bg-red-50 border-red-200"
+      }`}
+    >
+      <div className={`mt-0.5 flex-shrink-0 ${down ? "text-amber-500" : "text-red-500"}`}>
+        {down ? <WifiOff className="w-4 h-4" /> : <AlertTriangle className="w-4 h-4" />}
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className={`text-sm font-semibold ${down ? "text-amber-800" : "text-red-800"}`}>
+          {down ? "Layanan AI tidak tersedia" : "Terjadi kesalahan"}
+        </p>
+        <p className={`text-xs mt-0.5 ${down ? "text-amber-700" : "text-red-700"}`}>
+          {message}
+        </p>
+        {down && (
+          <p className="text-xs text-amber-600 mt-1">
+            Pastikan FastAPI AI service sudah berjalan di port 8000.
+          </p>
+        )}
+      </div>
+      <div className="flex items-center gap-1 flex-shrink-0">
+        {onRetry && (
+          <button
+            onClick={onRetry}
+            className={`p-1.5 rounded-lg text-xs flex items-center gap-1 transition-colors ${
+              down
+                ? "hover:bg-amber-100 text-amber-600 hover:text-amber-800"
+                : "hover:bg-red-100 text-red-500 hover:text-red-700"
+            }`}
+            title="Coba lagi"
+          >
+            <RefreshCw className="w-3.5 h-3.5" />
+          </button>
+        )}
+        <button
+          onClick={onDismiss}
+          className={`p-1.5 rounded-lg transition-colors ${
+            down
+              ? "hover:bg-amber-100 text-amber-500 hover:text-amber-700"
+              : "hover:bg-red-100 text-red-400 hover:text-red-600"
+          }`}
+          title="Tutup"
+        >
+          <X className="w-3.5 h-3.5" />
+        </button>
+      </div>
+    </div>
+  );
+}
 
 export function ChatPage() {
-  const [sessions, setSessions] = useState<Session[]>(MOCK_SESSIONS);
-  const [activeSession, setActiveSession] = useState<Session | null>(null);
+  const [sessions, setSessions] = useState<AiSession[]>([]);
+  const [activeSession, setActiveSession] = useState<AiSession | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [loadingSession, setLoadingSession] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [lastQuestion, setLastQuestion] = useState<string | null>(null);
   const [showModal, setShowModal] = useState(false);
+  const [shops, setShops] = useState<Shop[]>([]);
+  const [sessionsLoading, setSessionsLoading] = useState(true);
 
-  function selectSession(id: string) {
-    const session = sessions.find((s) => s.id === id) ?? null;
-    setActiveSession(session);
-    setMessages(MOCK_MESSAGES[id] ?? []);
+  useEffect(() => {
+    async function init() {
+      try {
+        const [sessRes, shopRes] = await Promise.all([
+          aiChatApi.listSessions(),
+          api.get<{ success: boolean; data: Shop[] }>(
+            "/api/shops?page=1&limit=100",
+          ),
+        ]);
+        setSessions(sessRes.data ?? []);
+        setShops(shopRes.data ?? []);
+      } catch {
+        // silently fail — user can still create sessions
+      } finally {
+        setSessionsLoading(false);
+      }
+    }
+    init();
+  }, []);
+
+  async function selectSession(id: string) {
+    setLoadingSession(true);
     setError(null);
-  }
+    try {
+      const res = await aiChatApi.getSession(id);
+      const session = res.data;
+      setActiveSession(session);
 
-  function createSession(scope: "global" | "shop", shopId: string | null) {
-    const newSession: Session = {
-      id: `sess_${Date.now()}`,
-      scope,
-      shop_id: shopId,
-      Shop: shopId ? { name: MOCK_SHOPS.find((s) => s.id === shopId)?.name ?? "" } : null,
-      last_active_at: new Date().toISOString(),
-    };
-    setSessions((prev) => [newSession, ...prev]);
-    setActiveSession(newSession);
-    setMessages([]);
-    setError(null);
-  }
-
-  function deleteSession(id: string) {
-    setSessions((prev) => prev.filter((s) => s.id !== id));
-    if (activeSession?.id === id) {
-      setActiveSession(null);
-      setMessages([]);
+      const displayed: ChatMessage[] = session.messages.map((m) => {
+        const { content, queries } = parseAssistantMessage(m);
+        return {
+          id:         m.id,
+          role:       m.role,
+          content,
+          queries:    m.role === "assistant" ? queries : undefined,
+          created_at: m.created_at,
+        };
+      });
+      setMessages(displayed);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Gagal memuat sesi");
+    } finally {
+      setLoadingSession(false);
     }
   }
 
-  function sendMessage(question: string) {
+  async function createSession(
+    scope: "global" | "shop",
+    shopId: string | null,
+  ) {
+    try {
+      const res = await aiChatApi.createSession(scope, shopId);
+      const newSession = res.data;
+      setSessions((prev) => [newSession, ...prev]);
+      setActiveSession(newSession);
+      setMessages([]);
+      setError(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Gagal membuat sesi");
+    }
+  }
+
+  async function deleteSession(id: string) {
+    try {
+      await aiChatApi.deleteSession(id);
+      setSessions((prev) => prev.filter((s) => s.id !== id));
+      if (activeSession?.id === id) {
+        setActiveSession(null);
+        setMessages([]);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Gagal menghapus sesi");
+    }
+  }
+
+  async function sendMessage(question: string) {
     if (!activeSession || isLoading) return;
     setError(null);
+    setLastQuestion(question);
 
     const userMsg: ChatMessage = {
       role: "user",
@@ -167,16 +205,18 @@ export function ChatPage() {
     setMessages((prev) => [...prev, userMsg]);
     setIsLoading(true);
 
-    // Simulate API delay
-    setTimeout(() => {
+    try {
+      const res = await aiChatApi.chat(activeSession.id, question);
+      const result = res.data;
+
       const aiMsg: ChatMessage = {
         role: "assistant",
-        content:
-          "Ini adalah respons simulasi. Integrasi API akan diimplementasikan pada tahap berikutnya.",
-        tableData: null,
+        content: result.reply,
+        queries: result.queries ?? [],
         created_at: new Date().toISOString(),
       };
       setMessages((prev) => [...prev, aiMsg]);
+
       setSessions((prev) =>
         prev
           .map((s) =>
@@ -190,85 +230,124 @@ export function ChatPage() {
               new Date(a.last_active_at).getTime(),
           ),
       );
+    } catch (err) {
+      const msg =
+        err instanceof Error ? err.message : "Terjadi kesalahan, coba lagi.";
+      setError(msg);
+      setMessages((prev) => prev.slice(0, -1));
+    } finally {
       setIsLoading(false);
-    }, 1500);
+    }
   }
 
   return (
     <div className="flex h-full rounded-xl overflow-hidden border border-slate-200 shadow-sm bg-white">
       {/* Left panel — session list */}
       <div className="w-72 flex-shrink-0">
-        <SessionSidebar
-          sessions={sessions}
-          activeId={activeSession?.id ?? null}
-          onSelect={selectSession}
-          onNew={() => setShowModal(true)}
-          onDelete={deleteSession}
-        />
+        {sessionsLoading ? (
+          <div className="flex items-center justify-center h-full text-slate-400">
+            <Loader2 className="w-5 h-5 animate-spin" />
+          </div>
+        ) : (
+          <SessionSidebar
+            sessions={sessions}
+            activeId={activeSession?.id ?? null}
+            onSelect={selectSession}
+            onNew={() => setShowModal(true)}
+            onDelete={deleteSession}
+          />
+        )}
       </div>
 
       {/* Right panel — chat area */}
       <div className="flex-1 overflow-hidden">
-        {activeSession ? (
+        {loadingSession ? (
+          <div className="flex items-center justify-center h-full text-slate-400">
+            <Loader2 className="w-5 h-5 animate-spin" />
+          </div>
+        ) : activeSession ? (
           <div className="flex flex-col h-full">
             {/* Session header */}
-            <div className="px-5 py-3.5 border-b border-slate-100 flex items-center gap-3 bg-white flex-shrink-0">
-              <div className="w-8 h-8 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center">
+            <div className="px-4 py-3 border-b border-slate-100 flex items-center gap-3 bg-white flex-shrink-0">
+              <div className="w-7 h-7 rounded-md bg-amber-100 text-amber-600 flex items-center justify-center flex-shrink-0">
                 {activeSession.scope === "global" ? (
-                  <Globe className="w-4 h-4" />
+                  <Globe className="w-3.5 h-3.5" />
                 ) : (
-                  <Store className="w-4 h-4" />
+                  <Store className="w-3.5 h-3.5" />
                 )}
               </div>
-              <div>
-                <p className="text-sm font-semibold text-slate-800">
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-semibold text-slate-800 truncate">
                   {activeSession.Shop?.name ?? "Semua Toko (Global)"}
                 </p>
                 <p className="text-[10px] text-slate-400">
                   {activeSession.scope === "global"
-                    ? "Analisis seluruh toko"
-                    : "Analisis toko tertentu"}
+                    ? "Analisis seluruh data toko"
+                    : "Analisis data toko tertentu"}
                 </p>
+              </div>
+              {/* Small online indicator */}
+              <div className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-green-50 border border-green-200 flex-shrink-0">
+                <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+                <span className="text-[10px] font-medium text-green-700">AI Aktif</span>
               </div>
             </div>
 
+            {/* Error banner */}
+            {error && (
+              <ErrorBanner
+                message={error}
+                onDismiss={() => setError(null)}
+                onRetry={
+                  lastQuestion
+                    ? () => {
+                        setError(null);
+                        sendMessage(lastQuestion);
+                      }
+                    : undefined
+                }
+              />
+            )}
+
             {/* Chat */}
             <div className="flex-1 overflow-hidden">
-              <MainContainer style={{ height: "100%", border: "none" }}>
-                <ChatWindow
-                  messages={messages}
-                  isLoading={isLoading}
-                  error={error}
-                  onSend={sendMessage}
-                />
-              </MainContainer>
+              <ChatWindow
+                messages={messages}
+                isLoading={isLoading}
+                onSend={sendMessage}
+              />
             </div>
           </div>
         ) : (
-          /* Empty state */
-          <div className="flex flex-col items-center justify-center h-full text-slate-400 px-8">
-            <div className="w-16 h-16 rounded-2xl bg-indigo-50 text-indigo-400 flex items-center justify-center mb-4">
-              <Bot className="w-8 h-8" />
+          /* No active session — empty state */
+          <div className="flex flex-col h-full bg-slate-50/40">
+            {error && (
+              <ErrorBanner message={error} onDismiss={() => setError(null)} />
+            )}
+            <div className="flex flex-col items-center justify-center flex-1 px-8 text-center">
+              <div className="w-16 h-16 rounded-2xl bg-amber-50 border border-amber-200/70 flex items-center justify-center mb-5 shadow-sm shadow-amber-100">
+                <Bot className="w-8 h-8 text-amber-500" />
+              </div>
+              <p className="text-base font-semibold text-slate-700 mb-2">
+                AI Assistant POS
+              </p>
+              <p className="text-sm text-slate-400 leading-relaxed mb-6 max-w-xs">
+                Pilih sesi di sebelah kiri atau mulai percakapan baru untuk
+                menganalisis data toko Anda.
+              </p>
+              <button
+                onClick={() => setShowModal(true)}
+                className="flex items-center gap-2 px-5 py-2.5 rounded-lg bg-amber-500 hover:bg-amber-600 active:bg-amber-700 text-amber-950 text-sm font-semibold transition-colors shadow-sm shadow-amber-200/60"
+              >
+                Mulai Percakapan
+              </button>
             </div>
-            <p className="text-base font-semibold text-slate-600 mb-1">
-              AI Assistant POS
-            </p>
-            <p className="text-sm text-center leading-relaxed mb-6">
-              Pilih sesi di sebelah kiri atau buat percakapan baru untuk mulai
-              menganalisis data POS Anda.
-            </p>
-            <button
-              onClick={() => setShowModal(true)}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium transition-colors"
-            >
-              Mulai Percakapan
-            </button>
           </div>
         )}
       </div>
 
       <NewSessionModal
-        shops={MOCK_SHOPS}
+        shops={shops}
         open={showModal}
         onConfirm={createSession}
         onClose={() => setShowModal(false)}

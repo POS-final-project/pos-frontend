@@ -11,6 +11,7 @@ import {
   PackagePlus,
   Search,
 } from "lucide-react";
+import { Pagination } from "@/components/ui/pagination";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -42,6 +43,7 @@ import { useToast } from "@/components/ui/toast";
 import { cn } from "@/lib/utils";
 import { api } from "@/lib/api";
 import { getUser } from "@/lib/auth";
+import { PageHeader } from "@/components/layout/page-header";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -178,6 +180,10 @@ export function InventoryPage({ role }: InventoryPageProps) {
   const [loading, setLoading] = useState(true);
   const [movLoading, setMovLoading] = useState(false);
   const [error, setError] = useState("");
+  const [invSearch, setInvSearch] = useState("");
+  const [movType, setMovType] = useState<string>("");
+  const [movPage, setMovPage] = useState(1);
+  const [movTotal, setMovTotal] = useState(1);
 
   // Restock dialog
   const [restockOpen, setRestockOpen] = useState(false);
@@ -234,14 +240,17 @@ export function InventoryPage({ role }: InventoryPageProps) {
     }
   }, []);
 
-  const fetchMovements = useCallback(async (shopId: string) => {
+  const fetchMovements = useCallback(async (shopId: string, type: string, pg: number) => {
     if (!shopId) return;
     setMovLoading(true);
     try {
-      const res = await api.get<{ data: unknown }>(
-        `/api/inventory/movements?shopId=${shopId}&page=1&limit=100`,
+      const params = new URLSearchParams({ shopId, page: String(pg), limit: "30" });
+      if (type) params.set("type", type);
+      const res = await api.get<{ data: unknown; meta?: Record<string, number> }>(
+        `/api/inventory/movements?${params}`,
       );
       setMovements(extractList<Movement>(res.data));
+      setMovTotal(res.meta?.totalPages ?? 1);
     } catch {
       setMovements([]);
     } finally {
@@ -273,12 +282,13 @@ export function InventoryPage({ role }: InventoryPageProps) {
     if (selectedShopId) fetchInventory(selectedShopId);
   }, [selectedShopId, fetchInventory]);
 
-  // Movements: fetch when tab switches or shopId changes
+  // Movements: fetch when tab switches, shopId, or type filter changes (page handled in buttons)
   useEffect(() => {
     if (view === "movements" && selectedShopId) {
-      fetchMovements(selectedShopId);
+      setMovPage(1);
+      fetchMovements(selectedShopId, movType, 1);
     }
-  }, [view, selectedShopId, fetchMovements]);
+  }, [view, selectedShopId, movType, fetchMovements]);
 
   // ─── Restock ─────────────────────────────────────────────────────────────────
 
@@ -459,45 +469,40 @@ export function InventoryPage({ role }: InventoryPageProps) {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <div>
-          <h1 className="text-xl font-semibold text-slate-900">Inventory</h1>
-          <p className="text-sm text-slate-500 mt-0.5">
-            {canEdit
-              ? "Kelola stok dan pergerakan barang"
-              : "Stok barang toko (read-only)"}
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          {(role === "superadmin" || role === "admin") && shops.length > 0 && (
-            <Select
-              value={selectedShopId}
-              onValueChange={(v) => setSelectedShopId(v ?? "")}
-            >
-              <SelectTrigger className="w-48">
-                <span className="truncate text-sm">
-                  {shops.find((s) => s.id === selectedShopId)?.name ??
-                    "Pilih toko..."}
-                </span>
-              </SelectTrigger>
-              <SelectContent>
-                {shops.map((s) => (
-                  <SelectItem key={s.id} value={s.id}>
-                    {s.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
-          {canEdit && effectiveShopId && (
-            <Button variant="outline" className="gap-2" onClick={openInitStock}>
-              <PackagePlus className="w-4 h-4" />
-              Stok Awal
-            </Button>
-          )}
-        </div>
-      </div>
+      <PageHeader
+        title="Inventory"
+        description={canEdit ? "Kelola stok dan pergerakan barang" : "Stok barang toko (read-only)"}
+        action={
+          <div className="flex items-center gap-2">
+            {(role === "superadmin" || role === "admin") && shops.length > 0 && (
+              <Select
+                value={selectedShopId}
+                onValueChange={(v) => setSelectedShopId(v ?? "")}
+              >
+                <SelectTrigger className="w-48">
+                  <span className="truncate text-sm">
+                    {shops.find((s) => s.id === selectedShopId)?.name ??
+                      "Pilih toko..."}
+                  </span>
+                </SelectTrigger>
+                <SelectContent>
+                  {shops.map((s) => (
+                    <SelectItem key={s.id} value={s.id}>
+                      {s.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+            {canEdit && effectiveShopId && (
+              <Button variant="outline" className="gap-2" onClick={openInitStock}>
+                <PackagePlus className="w-4 h-4" />
+                Stok Awal
+              </Button>
+            )}
+          </div>
+        }
+      />
 
       {/* Tabs */}
       <div className="flex gap-1 border-b border-slate-200">
@@ -513,7 +518,7 @@ export function InventoryPage({ role }: InventoryPageProps) {
             className={cn(
               "flex items-center gap-2 px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors",
               view === key
-                ? "border-indigo-600 text-indigo-600"
+                ? "border-amber-500 text-amber-600"
                 : "border-transparent text-slate-500 hover:text-slate-700",
             )}
           >
@@ -531,6 +536,17 @@ export function InventoryPage({ role }: InventoryPageProps) {
 
       {/* Stock view */}
       {view === "stock" && (
+        <>
+        {/* Stock search */}
+        <div className="relative max-w-sm">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+          <Input
+            placeholder="Cari produk atau SKU..."
+            value={invSearch}
+            onChange={(e) => setInvSearch(e.target.value)}
+            className="pl-9"
+          />
+        </div>
         <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
           {loading ? (
             <table className="w-full">
@@ -573,7 +589,17 @@ export function InventoryPage({ role }: InventoryPageProps) {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {inventory.map((item, i) => {
+                  {inventory
+                    .filter((item) => {
+                      if (!invSearch.trim()) return true;
+                      const q = invSearch.toLowerCase();
+                      return (
+                        item.ProductVariant?.Product?.name?.toLowerCase().includes(q) ||
+                        item.ProductVariant?.name?.toLowerCase().includes(q) ||
+                        item.ProductVariant?.sku?.toLowerCase().includes(q)
+                      );
+                    })
+                    .map((item, i) => {
                     const stock = Number(item.stock);
                     const threshold = Number(item.low_stock_threshold);
                     const isLow = stock <= threshold;
@@ -657,10 +683,34 @@ export function InventoryPage({ role }: InventoryPageProps) {
             </div>
           )}
         </div>
+        </>
       )}
 
       {/* Movements view */}
       {view === "movements" && (
+        <>
+        {/* Movement type filter */}
+        <div className="flex items-center gap-3">
+          <Select
+            value={movType}
+            onValueChange={(v) => { setMovType(v); setMovPage(1); }}
+          >
+            <SelectTrigger className="w-44">
+              <span className="text-sm">
+                {movType ? MOVEMENT_LABELS[movType as MovementType] ?? movType : "Semua Tipe"}
+              </span>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">Semua Tipe</SelectItem>
+              <SelectItem value="restock">Restock</SelectItem>
+              <SelectItem value="sale">Penjualan</SelectItem>
+              <SelectItem value="refund">Refund</SelectItem>
+              <SelectItem value="transfer_in">Transfer Masuk</SelectItem>
+              <SelectItem value="transfer_out">Transfer Keluar</SelectItem>
+              <SelectItem value="adjustment">Penyesuaian</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
         <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
           {movLoading ? (
             <table className="w-full">
@@ -731,6 +781,17 @@ export function InventoryPage({ role }: InventoryPageProps) {
             </div>
           )}
         </div>
+
+        <Pagination
+          page={movPage}
+          totalPages={movTotal}
+          pageSize={30}
+          onPageChange={(newPg) => {
+            setMovPage(newPg);
+            fetchMovements(selectedShopId, movType, newPg);
+          }}
+        />
+        </>
       )}
 
       {/* ── Restock Dialog ───────────────────────────────────────────────────── */}
@@ -927,7 +988,7 @@ export function InventoryPage({ role }: InventoryPageProps) {
         <DialogContent className="sm:max-w-2xl max-h-[90vh] flex flex-col">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <PackagePlus className="w-5 h-5 text-indigo-600" />
+              <PackagePlus className="w-5 h-5 text-amber-600" />
               Inisialisasi Stok Awal
             </DialogTitle>
             <p className="text-sm text-slate-500 mt-1">
@@ -1075,7 +1136,7 @@ export function InventoryPage({ role }: InventoryPageProps) {
               </div>
               <div className="h-1.5 bg-slate-200 rounded-full overflow-hidden">
                 <div
-                  className="h-full bg-indigo-500 transition-all duration-300"
+                  className="h-full bg-amber-500 transition-all duration-300"
                   style={{
                     width: `${(initProgress.done / initProgress.total) * 100}%`,
                   }}

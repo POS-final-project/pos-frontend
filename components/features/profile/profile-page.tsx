@@ -16,6 +16,7 @@ import {
 import { useToast } from "@/components/ui/toast";
 import { api } from "@/lib/api";
 import { getUser, type AuthUser } from "@/lib/auth";
+import { PageHeader } from "@/components/layout/page-header";
 import { setCookie } from "@/lib/cookies";
 
 type ProfileData = {
@@ -267,10 +268,10 @@ export function ProfilePage() {
 
   return (
     <div className="space-y-5 max-w-2xl">
-      <div>
-        <h1 className="text-xl font-semibold text-slate-900">Profile</h1>
-        <p className="text-sm text-slate-500 mt-0.5">Kelola informasi akun dan keamanan Anda</p>
-      </div>
+      <PageHeader
+        title="Profile"
+        description="Kelola informasi akun dan keamanan Anda"
+      />
 
       {/* Profile Card */}
       <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
@@ -291,7 +292,7 @@ export function ProfilePage() {
           {/* Avatar Row */}
           <div className="flex items-center gap-4">
             <div className="relative shrink-0">
-              <div className="w-16 h-16 rounded-full overflow-hidden bg-gradient-to-br from-indigo-500 to-indigo-700 flex items-center justify-center shadow">
+              <div className="w-16 h-16 rounded-full overflow-hidden bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center shadow">
                 {avatarSrc ? (
                   <img src={avatarSrc} alt="Foto profil" className="w-full h-full object-cover" />
                 ) : (
@@ -302,7 +303,7 @@ export function ProfilePage() {
                 type="button"
                 onClick={() => fileRef.current?.click()}
                 disabled={photoLoading}
-                className="absolute -bottom-0.5 -right-0.5 w-6 h-6 rounded-full bg-white border-2 border-slate-200 flex items-center justify-center text-slate-500 hover:bg-indigo-50 hover:text-indigo-600 hover:border-indigo-300 transition-colors disabled:opacity-40 shadow-sm"
+                className="absolute -bottom-0.5 -right-0.5 w-6 h-6 rounded-full bg-white border-2 border-slate-200 flex items-center justify-center text-slate-500 hover:bg-amber-50 hover:text-amber-600 hover:border-amber-300 transition-colors disabled:opacity-40 shadow-sm"
                 title="Ganti foto profil"
               >
                 <Camera className="w-3 h-3" />

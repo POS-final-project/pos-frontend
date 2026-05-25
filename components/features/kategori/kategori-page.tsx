@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { Pencil, Trash2, Plus, Tag } from "lucide-react";
+import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -152,22 +153,19 @@ export function KategoriPage({ canEdit = true }: KategoriPageProps) {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-semibold text-slate-900">Kategori</h1>
-          <p className="text-sm text-slate-500 mt-0.5">
-            {canEdit
-              ? "Kelola kategori produk"
-              : "Daftar kategori produk (read-only)"}
-          </p>
-        </div>
-        {canEdit && (
-          <Button onClick={openCreate} className="gap-2">
-            <Plus className="w-4 h-4" />
-            Tambah Kategori
-          </Button>
-        )}
-      </div>
+      <PageHeader
+        title="Kategori"
+        description={canEdit ? "Kelola kategori produk" : "Daftar kategori produk (read-only)"}
+        count={loading ? undefined : categories.length}
+        action={
+          canEdit ? (
+            <Button onClick={openCreate} className="gap-2">
+              <Plus className="w-4 h-4" />
+              Tambah Kategori
+            </Button>
+          ) : undefined
+        }
+      />
 
       {error && (
         <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-4 py-3">
@@ -221,7 +219,7 @@ export function KategoriPage({ canEdit = true }: KategoriPageProps) {
                           variant="ghost"
                           size="icon-sm"
                           onClick={() => openEdit(cat)}
-                          className="text-slate-500 hover:text-indigo-600"
+                          className="text-slate-500 hover:text-amber-600"
                           title="Edit kategori"
                         >
                           <Pencil className="w-3.5 h-3.5" />

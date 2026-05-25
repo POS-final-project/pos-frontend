@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Plus, Pencil, Trash2, Users, Search, UserPlus } from "lucide-react";
+import { Pagination } from "@/components/ui/pagination";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -24,6 +25,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { TableSkeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/components/ui/toast";
 import { api } from "@/lib/api";
+import { PageHeader } from "@/components/layout/page-header";
 
 function extractList<T>(data: unknown): T[] {
   if (Array.isArray(data)) return data as T[];
@@ -48,6 +50,10 @@ export function PelangganPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [total, setTotal] = useState(0);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Create / Edit dialog
   const [dialog, setDialog] = useState(false);
@@ -64,12 +70,18 @@ export function PelangganPage() {
   const [deleteTarget, setDeleteTarget] = useState<Customer | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
 
-  const fetchCustomers = useCallback(async () => {
+  const fetchCustomers = useCallback(async (term: string, pg: number) => {
     setLoading(true);
     setError("");
     try {
-      const res = await api.get<{ success: boolean; data: unknown }>("/api/customers?page=1&limit=200");
+      const params = new URLSearchParams({ page: String(pg), limit: "20" });
+      if (term.trim()) params.set("search", term.trim());
+      const res = await api.get<{ success: boolean; data: unknown; meta?: Record<string, number> }>(
+        `/api/customers?${params}`,
+      );
       setCustomers(extractList<Customer>(res.data));
+      setTotal(res.meta?.total ?? 0);
+      setTotalPages(res.meta?.totalPages ?? 1);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Gagal memuat pelanggan");
     } finally {
@@ -77,19 +89,22 @@ export function PelangganPage() {
     }
   }, []);
 
+  // Mount: initial fetch
   useEffect(() => {
-    fetchCustomers();
-  }, [fetchCustomers]);
+    fetchCustomers("", 1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  const filtered = customers.filter((c) => {
-    if (!search) return true;
-    const q = search.toLowerCase();
-    return (
-      c.name.toLowerCase().includes(q) ||
-      c.phone?.includes(q) ||
-      c.email?.toLowerCase().includes(q)
-    );
-  });
+
+
+  function handleSearchChange(val: string) {
+    setSearch(val);
+    setPage(1);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      fetchCustomers(val, 1);
+    }, 350);
+  }
 
   function openCreate() {
     setEditTarget(null);
@@ -134,7 +149,7 @@ export function PelangganPage() {
         toast({ title: "Pelanggan ditambahkan", variant: "success" });
       }
       setDialog(false);
-      fetchCustomers();
+      fetchCustomers(search, page);
     } catch (err) {
       setFormError(err instanceof Error ? err.message : "Gagal menyimpan");
     } finally {
@@ -149,7 +164,7 @@ export function PelangganPage() {
       await api.delete(`/api/customers/${deleteTarget.id}`);
       toast({ title: "Pelanggan dihapus", variant: "success" });
       setDeleteDialog(false);
-      fetchCustomers();
+      fetchCustomers(search, page);
     } catch (err) {
       toast({
         title: "Gagal menghapus",
@@ -164,16 +179,17 @@ export function PelangganPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-semibold text-slate-900">Pelanggan</h1>
-          <p className="text-sm text-slate-500 mt-0.5">Kelola data pelanggan</p>
-        </div>
-        <Button onClick={openCreate} className="gap-2">
-          <Plus className="w-4 h-4" />
-          Tambah Pelanggan
-        </Button>
-      </div>
+      <PageHeader
+        title="Pelanggan"
+        description="Kelola data pelanggan"
+        count={loading ? undefined : total}
+        action={
+          <Button onClick={openCreate} className="gap-2">
+            <Plus className="w-4 h-4" />
+            Tambah Pelanggan
+          </Button>
+        }
+      />
 
       {error && (
         <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-4 py-3">
@@ -188,15 +204,10 @@ export function PelangganPage() {
           <Input
             placeholder="Cari nama, telepon, atau email..."
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => handleSearchChange(e.target.value)}
             className="pl-9"
           />
         </div>
-        {search && (
-          <span className="text-xs text-slate-400 whitespace-nowrap">
-            {filtered.length} hasil
-          </span>
-        )}
       </div>
 
       <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
@@ -206,7 +217,7 @@ export function PelangganPage() {
               <TableSkeleton cols={6} rows={5} />
             </tbody>
           </table>
-        ) : filtered.length === 0 ? (
+        ) : customers.length === 0 ? (
           <EmptyState
             icon={Users}
             title={search ? "Pelanggan tidak ditemukan" : "Belum ada pelanggan"}
@@ -237,10 +248,10 @@ export function PelangganPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filtered.map((c, i) => (
+              {customers.map((c, i) => (
                 <TableRow key={c.id} className="hover:bg-slate-50/70 transition-colors">
                   <TableCell className="text-center tabular-nums text-slate-400">
-                    {i + 1}
+                    {(page - 1) * 20 + i + 1}
                   </TableCell>
                   <TableCell className="font-medium">{c.name}</TableCell>
                   <TableCell className="text-slate-500">{c.phone ?? "-"}</TableCell>
@@ -257,7 +268,7 @@ export function PelangganPage() {
                         variant="ghost"
                         size="icon-sm"
                         onClick={() => openEdit(c)}
-                        className="text-slate-500 hover:text-indigo-600"
+                        className="text-slate-500 hover:text-amber-600"
                         title="Edit pelanggan"
                       >
                         <Pencil className="w-3.5 h-3.5" />
@@ -279,6 +290,17 @@ export function PelangganPage() {
           </Table>
         )}
       </div>
+
+      <Pagination
+        page={page}
+        totalPages={totalPages}
+        total={total}
+        pageSize={20}
+        onPageChange={(newPg) => {
+          setPage(newPg);
+          fetchCustomers(search, newPg);
+        }}
+      />
 
       {/* Create / Edit Dialog */}
       <Dialog open={dialog} onOpenChange={setDialog}>

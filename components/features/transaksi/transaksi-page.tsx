@@ -2,13 +2,17 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import {
-  Receipt,
-  ChevronLeft,
-  ChevronRight,
   Eye,
   X,
   SearchX,
+  SlidersHorizontal,
+  Receipt,
+  Printer,
 } from "lucide-react";
+import { Pagination } from "@/components/ui/pagination";
+import { ReceiptModal } from "@/components/features/transaksi/receipt-modal";
+import { PageHeader } from "@/components/layout/page-header";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -139,8 +143,8 @@ type Transaction = {
   User?: { id: string; name: string };
   customer_id?: string;
   Customer?: { id: string; name: string; phone?: string };
-  payment_method: "cash" | "transfer" | "qris" | "credit";
-  status: "pending" | "completed" | "cancelled";
+  payment_method: "cash" | "qris";
+  status: "selesai" | "refunded";
   total_amount?: number | string; // some API shapes use "total" instead
   total?: number | string;
   subtotal?: number | string;
@@ -154,22 +158,18 @@ type Transaction = {
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const STATUS_LABEL: Record<string, string> = {
-  pending: "Pending",
-  completed: "Selesai",
-  cancelled: "Dibatalkan",
+  selesai: "Selesai",
+  refunded: "Refunded",
 };
 
 const STATUS_CLASS: Record<string, string> = {
-  pending: "bg-yellow-50 text-yellow-700 border-yellow-200",
-  completed: "bg-green-50 text-green-700 border-green-200",
-  cancelled: "bg-red-50 text-red-600 border-red-200",
+  selesai: "bg-green-50 text-green-700 border-green-200",
+  refunded: "bg-red-50 text-red-600 border-red-200",
 };
 
 const PAYMENT_LABEL: Record<string, string> = {
   cash: "Tunai",
-  transfer: "Transfer",
   qris: "QRIS",
-  credit: "Kredit",
 };
 
 // ─── Skeleton ────────────────────────────────────────────────────────────────
@@ -184,7 +184,11 @@ function TableSkeleton({ cols }: { cols: number }) {
               <div
                 className={cn(
                   "h-4 rounded-md bg-slate-100",
-                  j === 0 ? "w-6 mx-auto" : j === cols - 1 ? "w-8 mx-auto" : "w-full max-w-[120px]",
+                  j === 0
+                    ? "w-6 mx-auto"
+                    : j === cols - 1
+                      ? "w-8 mx-auto"
+                      : "w-full max-w-[120px]",
                 )}
               />
             </TableCell>
@@ -226,6 +230,13 @@ export function TransaksiPage({ role }: TransaksiPageProps) {
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailOpen, setDetailOpen] = useState(false);
 
+  // Receipt modal
+  const [receiptOpen, setReceiptOpen] = useState(false);
+  const [receiptTxId, setReceiptTxId] = useState<string | null>(null);
+  const [receiptShopId, setReceiptShopId] = useState<string | undefined>(
+    undefined,
+  );
+
   // Used to debounce fetch on filter change
   const fetchRef = useRef(0);
 
@@ -246,11 +257,11 @@ export function TransaksiPage({ role }: TransaksiPageProps) {
         if (filterDateFrom) params.set("date_from", filterDateFrom);
         if (filterDateTo) params.set("date_to", filterDateTo);
 
-        const res = await api.get<{ data: unknown }>(
+        const res = await api.get<{ success: boolean; data: unknown; meta?: Record<string, number> }>(
           `/api/transactions?${params.toString()}`,
         );
         if (ticket !== fetchRef.current) return;
-        const { items, totalPages: tp } = extractTransactions(res.data);
+        const { items, totalPages: tp } = extractTransactions(res);
         setTransactions(items);
         setTotalPages(tp);
       } catch (err) {
@@ -394,6 +405,10 @@ export function TransaksiPage({ role }: TransaksiPageProps) {
     filterDateTo ||
     (role === "superadmin" && selectedShopId);
 
+  const activeFilterCount =
+    [filterStatus, filterPayment, filterDateFrom, filterDateTo].filter(Boolean)
+      .length + (role === "superadmin" && selectedShopId ? 1 : 0);
+
   // ─── Render ───────────────────────────────────────────────────────────────
 
   const showShopColumn = role === "superadmin";
@@ -406,132 +421,149 @@ export function TransaksiPage({ role }: TransaksiPageProps) {
   return (
     <div className="space-y-5">
       {/* Header */}
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <div>
-          <h1 className="text-xl font-semibold text-slate-900">Transaksi</h1>
-          <p className="text-sm text-slate-500 mt-0.5">
-            {role === "superadmin"
-              ? "Semua transaksi lintas toko"
-              : currentShopName
-                ? `Toko: ${currentShopName}`
-                : "Transaksi toko Anda"}
-          </p>
-        </div>
-      </div>
+      <PageHeader
+        title="Transaksi"
+        description={
+          role === "superadmin"
+            ? "Semua transaksi lintas toko"
+            : currentShopName
+              ? `Toko: ${currentShopName}`
+              : "Transaksi toko Anda"
+        }
+      />
 
       {/* Filter bar */}
-      <div className="bg-white border border-slate-200 rounded-xl p-4 flex flex-wrap gap-3 items-end">
-        {/* Shop dropdown — superadmin & admin */}
-        {showShopDropdown && (
-          <div className="flex flex-col gap-1 min-w-44">
-            <span className="text-xs font-medium text-slate-500">Toko</span>
+      <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
+        <div className="flex items-center justify-between px-4 py-2.5 border-b border-slate-100">
+          <div className="flex items-center gap-2">
+            <SlidersHorizontal className="w-3.5 h-3.5 text-muted-foreground" />
+            <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
+              Filter
+            </span>
+            {activeFilterCount > 0 && (
+              <span
+                className="text-[10px] font-bold px-1.5 py-0.5 rounded-full leading-none"
+                style={{
+                  background: "oklch(0.72 0.19 48)",
+                  color: "oklch(0.13 0.03 48)",
+                }}
+              >
+                {activeFilterCount}
+              </span>
+            )}
+          </div>
+          {hasActiveFilter && (
+            <Button
+              variant="ghost"
+              size="xs"
+              className="h-6 gap-1 text-xs text-muted-foreground hover:text-amber-600"
+              onClick={clearFilters}
+            >
+              <X className="w-3 h-3" />
+              Reset semua
+            </Button>
+          )}
+        </div>
+        <div className="p-4 flex flex-wrap gap-3 items-end">
+          {/* Shop dropdown — superadmin & admin */}
+          {showShopDropdown && (
+            <div className="flex flex-col gap-1 min-w-44">
+              <span className="text-xs font-medium text-slate-500">Toko</span>
+              <Select
+                value={selectedShopId || "__all"}
+                onValueChange={(v) =>
+                  setSelectedShopId(v === "__all" ? "" : (v ?? ""))
+                }
+              >
+                <SelectTrigger className="h-9 text-sm">
+                  <span className="truncate">
+                    {selectedShopId
+                      ? shops.find((s) => s.id === selectedShopId)?.name
+                      : "Semua Toko"}
+                  </span>
+                </SelectTrigger>
+                <SelectContent>
+                  {role === "superadmin" && (
+                    <SelectItem value="__all">Semua Toko</SelectItem>
+                  )}
+                  {shops.map((s) => (
+                    <SelectItem key={s.id} value={s.id}>
+                      {s.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
+          {/* Date range */}
+          <div className="flex flex-col gap-1">
+            <span className="text-xs font-medium text-slate-500">Dari</span>
+            <Input
+              type="date"
+              className="h-9 text-sm w-38"
+              value={filterDateFrom}
+              onChange={(e) => setFilterDateFrom(e.target.value)}
+            />
+          </div>
+          <div className="flex flex-col gap-1">
+            <span className="text-xs font-medium text-slate-500">Sampai</span>
+            <Input
+              type="date"
+              className="h-9 text-sm w-38"
+              value={filterDateTo}
+              onChange={(e) => setFilterDateTo(e.target.value)}
+            />
+          </div>
+
+          {/* Status */}
+          <div className="flex flex-col gap-1 min-w-36">
+            <span className="text-xs font-medium text-slate-500">Status</span>
             <Select
-              value={selectedShopId || "__all"}
+              value={filterStatus || "__all"}
               onValueChange={(v) =>
-                setSelectedShopId(v === "__all" ? "" : (v ?? ""))
+                setFilterStatus(v === "__all" ? "" : (v ?? ""))
               }
             >
               <SelectTrigger className="h-9 text-sm">
-                <span className="truncate">
-                  {selectedShopId
-                    ? shops.find((s) => s.id === selectedShopId)?.name
-                    : "Semua Toko"}
+                <span>
+                  {filterStatus ? STATUS_LABEL[filterStatus] : "Semua"}
                 </span>
               </SelectTrigger>
               <SelectContent>
-                {role === "superadmin" && (
-                  <SelectItem value="__all">Semua Toko</SelectItem>
-                )}
-                {shops.map((s) => (
-                  <SelectItem key={s.id} value={s.id}>
-                    {s.name}
-                  </SelectItem>
-                ))}
+                <SelectItem value="__all">Semua Status</SelectItem>
+                <SelectItem value="selesai">Selesai</SelectItem>
+                <SelectItem value="refunded">Refunded</SelectItem>
               </SelectContent>
             </Select>
           </div>
-        )}
 
-        {/* Date range */}
-        <div className="flex flex-col gap-1">
-          <span className="text-xs font-medium text-slate-500">Dari</span>
-          <Input
-            type="date"
-            className="h-9 text-sm w-38"
-            value={filterDateFrom}
-            onChange={(e) => setFilterDateFrom(e.target.value)}
-          />
+          {/* Payment method */}
+          <div className="flex flex-col gap-1 min-w-36">
+            <span className="text-xs font-medium text-slate-500">
+              Pembayaran
+            </span>
+            <Select
+              value={filterPayment || "__all"}
+              onValueChange={(v) =>
+                setFilterPayment(v === "__all" ? "" : (v ?? ""))
+              }
+            >
+              <SelectTrigger className="h-9 text-sm">
+                <span>
+                  {filterPayment ? PAYMENT_LABEL[filterPayment] : "Semua"}
+                </span>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__all">Semua Metode</SelectItem>
+                <SelectItem value="cash">Tunai</SelectItem>
+                <SelectItem value="qris">QRIS</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Clear */}
         </div>
-        <div className="flex flex-col gap-1">
-          <span className="text-xs font-medium text-slate-500">Sampai</span>
-          <Input
-            type="date"
-            className="h-9 text-sm w-38"
-            value={filterDateTo}
-            onChange={(e) => setFilterDateTo(e.target.value)}
-          />
-        </div>
-
-        {/* Status */}
-        <div className="flex flex-col gap-1 min-w-36">
-          <span className="text-xs font-medium text-slate-500">Status</span>
-          <Select
-            value={filterStatus || "__all"}
-            onValueChange={(v) =>
-              setFilterStatus(v === "__all" ? "" : (v ?? ""))
-            }
-          >
-            <SelectTrigger className="h-9 text-sm">
-              <span>{filterStatus ? STATUS_LABEL[filterStatus] : "Semua"}</span>
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="__all">Semua Status</SelectItem>
-              <SelectItem value="pending">Pending</SelectItem>
-              <SelectItem value="completed">Selesai</SelectItem>
-              <SelectItem value="cancelled">Dibatalkan</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
-        {/* Payment method */}
-        <div className="flex flex-col gap-1 min-w-36">
-          <span className="text-xs font-medium text-slate-500">
-            Pembayaran
-          </span>
-          <Select
-            value={filterPayment || "__all"}
-            onValueChange={(v) =>
-              setFilterPayment(v === "__all" ? "" : (v ?? ""))
-            }
-          >
-            <SelectTrigger className="h-9 text-sm">
-              <span>
-                {filterPayment ? PAYMENT_LABEL[filterPayment] : "Semua"}
-              </span>
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="__all">Semua Metode</SelectItem>
-              <SelectItem value="cash">Tunai</SelectItem>
-              <SelectItem value="transfer">Transfer</SelectItem>
-              <SelectItem value="qris">QRIS</SelectItem>
-              <SelectItem value="credit">Kredit</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
-        {/* Clear */}
-        {hasActiveFilter && (
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-9 gap-1.5 text-slate-500 self-end"
-            onClick={clearFilters}
-          >
-            <X className="w-3.5 h-3.5" />
-            Reset
-          </Button>
-        )}
-
       </div>
 
       {error && (
@@ -548,13 +580,22 @@ export function TransaksiPage({ role }: TransaksiPageProps) {
               <SearchX className="w-8 h-8 text-slate-300" />
             </div>
             <div className="text-center">
-              <p className="text-sm font-medium text-slate-500">Tidak ada transaksi</p>
+              <p className="text-sm font-medium text-slate-500">
+                Tidak ada transaksi
+              </p>
               <p className="text-xs text-slate-400 mt-1">
-                {hasActiveFilter ? "Coba ubah atau reset filter yang aktif" : "Belum ada data transaksi tersedia"}
+                {hasActiveFilter
+                  ? "Coba ubah atau reset filter yang aktif"
+                  : "Belum ada data transaksi tersedia"}
               </p>
             </div>
             {hasActiveFilter && (
-              <Button variant="outline" size="sm" onClick={clearFilters} className="gap-1.5 text-xs">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={clearFilters}
+                className="gap-1.5 text-xs"
+              >
                 <X className="w-3.5 h-3.5" />
                 Reset Filter
               </Button>
@@ -578,12 +619,22 @@ export function TransaksiPage({ role }: TransaksiPageProps) {
               </TableHeader>
               <TableBody>
                 {loading ? (
-                  <TableSkeleton cols={5 + (showShopColumn ? 1 : 0) + (role !== "user" ? 1 : 0) + 2} />
+                  <TableSkeleton
+                    cols={
+                      5 +
+                      (showShopColumn ? 1 : 0) +
+                      (role !== "user" ? 1 : 0) +
+                      2
+                    }
+                  />
                 ) : (
                   transactions.map((tx, i) => {
                     const kasirName = tx.User?.name ?? tx.user?.name ?? "-";
                     return (
-                      <TableRow key={tx.id} className="hover:bg-slate-50/70 transition-colors">
+                      <TableRow
+                        key={tx.id}
+                        className="hover:bg-slate-50/70 transition-colors"
+                      >
                         <TableCell className="text-center tabular-nums text-slate-400 text-xs">
                           {(page - 1) * 20 + i + 1}
                         </TableCell>
@@ -617,30 +668,19 @@ export function TransaksiPage({ role }: TransaksiPageProps) {
                           </TableCell>
                         )}
                         <TableCell>
-                          <span className="text-xs font-medium text-slate-600">
-                            {PAYMENT_LABEL[tx.payment_method] ??
-                              tx.payment_method}
-                          </span>
+                          <StatusBadge status={tx.payment_method} />
                         </TableCell>
                         <TableCell className="text-right tabular-nums font-semibold text-slate-900 text-sm">
                           {formatRp(txTotal(tx))}
                         </TableCell>
                         <TableCell>
-                          <span
-                            className={cn(
-                              "text-xs font-medium px-2 py-0.5 rounded-full border",
-                              STATUS_CLASS[tx.status] ??
-                                "bg-slate-100 text-slate-600 border-slate-200",
-                            )}
-                          >
-                            {STATUS_LABEL[tx.status] ?? tx.status}
-                          </span>
+                          <StatusBadge status={tx.status} />
                         </TableCell>
                         <TableCell className="text-center">
                           <Button
                             variant="ghost"
                             size="icon-sm"
-                            className="text-slate-400 hover:text-indigo-600"
+                            className="text-slate-400 hover:text-amber-600"
                             onClick={() => openDetail(tx)}
                           >
                             <Eye className="w-4 h-4" />
@@ -656,72 +696,46 @@ export function TransaksiPage({ role }: TransaksiPageProps) {
         )}
       </div>
 
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="flex items-center justify-between text-sm">
-          <span className="text-slate-500 text-xs">
-            Halaman <span className="font-medium text-slate-700">{page}</span> dari <span className="font-medium text-slate-700">{totalPages}</span>
-          </span>
-          <div className="flex items-center gap-1">
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={page <= 1}
-              onClick={() => setPage((p) => p - 1)}
-              className="gap-1 h-8 px-2.5"
-            >
-              <ChevronLeft className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Sebelumnya</span>
-            </Button>
+      <Pagination
+        page={page}
+        totalPages={totalPages}
+        onPageChange={setPage}
+        pageSize={20}
+      />
 
-            {/* Page numbers */}
-            {(() => {
-              const delta = 2;
-              const start = Math.max(1, page - delta);
-              const end = Math.min(totalPages, page + delta);
-              const pages: (number | "...")[] = [];
-              if (start > 1) { pages.push(1); if (start > 2) pages.push("..."); }
-              for (let p = start; p <= end; p++) pages.push(p);
-              if (end < totalPages) { if (end < totalPages - 1) pages.push("..."); pages.push(totalPages); }
-              return pages.map((p, idx) =>
-                p === "..." ? (
-                  <span key={`ellipsis-${idx}`} className="px-1 text-slate-400 text-xs select-none">…</span>
-                ) : (
-                  <Button
-                    key={p}
-                    variant={p === page ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => setPage(p)}
-                    className={cn("h-8 w-8 p-0 text-xs", p === page && "pointer-events-none")}
-                  >
-                    {p}
-                  </Button>
-                )
-              );
-            })()}
-
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={page >= totalPages}
-              onClick={() => setPage((p) => p + 1)}
-              className="gap-1 h-8 px-2.5"
-            >
-              <span className="hidden sm:inline">Berikutnya</span>
-              <ChevronRight className="w-3.5 h-3.5" />
-            </Button>
-          </div>
-        </div>
-      )}
+      {/* Receipt Modal */}
+      <ReceiptModal
+        open={receiptOpen}
+        onClose={() => setReceiptOpen(false)}
+        transactionId={receiptTxId}
+        shopId={receiptShopId}
+      />
 
       {/* Detail Dialog */}
       <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
         <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Receipt className="w-4 h-4 text-indigo-600" />
-              Detail Transaksi
-            </DialogTitle>
+            <div className="flex items-center justify-between">
+              <DialogTitle className="flex items-center gap-2">
+                <Receipt className="w-4 h-4 text-amber-600" />
+                Detail Transaksi
+              </DialogTitle>
+              {detailTx && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="gap-1.5 h-8 text-xs mr-6"
+                  onClick={() => {
+                    setReceiptTxId(detailTx.id);
+                    setReceiptShopId(detailTx.shop_id);
+                    setReceiptOpen(true);
+                  }}
+                >
+                  <Printer className="w-3.5 h-3.5" />
+                  Cetak Receipt
+                </Button>
+              )}
+            </div>
           </DialogHeader>
 
           {detailLoading ? (
@@ -839,7 +853,7 @@ export function TransaksiPage({ role }: TransaksiPageProps) {
                         >
                           Total
                         </td>
-                        <td className="px-3 py-2.5 text-right font-bold text-indigo-700 tabular-nums">
+                        <td className="px-3 py-2.5 text-right font-bold text-amber-700 tabular-nums">
                           {formatRp(txTotal(detailTx))}
                         </td>
                       </tr>

@@ -23,13 +23,29 @@ export function EmptyState({
         className,
       )}
     >
-      <div className="w-16 h-16 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-center">
-        <Icon className="w-8 h-8 text-slate-300" />
+      <div className="relative">
+        <div
+          className="w-16 h-16 rounded-2xl flex items-center justify-center shadow-sm"
+          style={{
+            background: "oklch(0.96 0.01 60)",
+            border: "1px solid oklch(0.90 0.04 60)",
+          }}
+        >
+          <Icon className="w-8 h-8" style={{ color: "oklch(0.72 0.19 48)" }} />
+        </div>
+        <div
+          className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full border-2 border-white"
+          style={{ background: "oklch(0.88 0.12 60)" }}
+        />
       </div>
-      <div className="text-center">
-        <p className="text-sm font-medium text-slate-600">{title}</p>
+      <div className="text-center space-y-1">
+        <p className="text-sm font-semibold" style={{ color: "oklch(0.25 0.02 260)" }}>
+          {title}
+        </p>
         {description && (
-          <p className="text-xs text-slate-400 mt-1">{description}</p>
+          <p className="text-xs max-w-[220px]" style={{ color: "oklch(0.55 0.012 260)" }}>
+            {description}
+          </p>
         )}
       </div>
       {action}
