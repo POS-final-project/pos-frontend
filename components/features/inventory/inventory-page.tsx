@@ -693,7 +693,7 @@ export function InventoryPage({ role }: InventoryPageProps) {
         <div className="flex items-center gap-3">
           <Select
             value={movType}
-            onValueChange={(v) => { setMovType(v); setMovPage(1); }}
+            onValueChange={(v) => { setMovType(v ?? ""); setMovPage(1); }}
           >
             <SelectTrigger className="w-44">
               <span className="text-sm">

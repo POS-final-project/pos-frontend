@@ -440,8 +440,8 @@ export function DashboardPage({ role }: { role: "admin" | "superadmin" }) {
                 axisLine={false}
               />
               <Tooltip
-                formatter={(value: number, name: string) => [
-                  name === "qty" ? `${value} unit` : formatRpFull(value),
+                formatter={(value, name) => [
+                  name === "qty" ? `${value ?? 0} unit` : formatRpFull(Number(value ?? 0)),
                   name === "qty" ? "Terjual" : "Revenue",
                 ]}
               />
