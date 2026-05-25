@@ -395,9 +395,8 @@ export function DashboardPage({ role }: { role: "admin" | "superadmin" }) {
                   ))}
                 </Pie>
                 <Tooltip
-                  formatter={(value: number, name: string) => [
-                    `${value} transaksi (${Math.round((value / totalTx) * 100)}%)`,
-                    name,
+                  formatter={(value) => [
+                    `${Number(value)} transaksi (${Math.round((Number(value) / totalTx) * 100)}%)`,
                   ]}
                 />
                 <Legend
