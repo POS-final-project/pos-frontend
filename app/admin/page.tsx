@@ -1,5 +1,5 @@
-import { ComingSoon } from "@/components/coming-soon";
+import { DashboardPage } from "@/components/features/dashboard/dashboard-page";
 
 export default function AdminDashboardPage() {
-  return <ComingSoon title="Dashboard" description="Halaman dashboard dengan overview toko yang dikelola sedang dalam pengembangan." />;
+  return <DashboardPage role="admin" />;
 }

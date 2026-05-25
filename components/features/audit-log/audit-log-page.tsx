@@ -2,8 +2,9 @@
 
 import { useState, useEffect, useCallback } from "react";
 import {
-  FileText, Eye, ChevronLeft, ChevronRight, X,
+  FileText, Eye, X,
 } from "lucide-react";
+import { Pagination } from "@/components/ui/pagination";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -20,6 +21,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { TableSkeleton } from "@/components/ui/skeleton";
 import { api } from "@/lib/api";
 import { getUser } from "@/lib/auth";
+import { PageHeader } from "@/components/layout/page-header";
 import { cn } from "@/lib/utils";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -207,92 +209,112 @@ export function AuditLogPage({ role }: AuditLogPageProps) {
 
   return (
     <div className="space-y-5">
-      {/* Header */}
-      <div>
-        <h1 className="text-xl font-semibold text-slate-900">Log & Audit</h1>
-        <p className="text-sm text-slate-500 mt-0.5">
-          Rekam jejak seluruh aksi mutasi yang terjadi di sistem
-        </p>
-      </div>
+      <PageHeader
+        title="Log & Audit"
+        description="Rekam jejak seluruh aksi mutasi yang terjadi di sistem"
+      />
 
       {/* Filters */}
       <div className="bg-white rounded-xl border border-slate-200 px-5 py-4 space-y-3">
-        <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">Filter</p>
+        <div className="flex items-center justify-between">
+          <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">Filter</p>
+          {hasActiveFilters && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={clearFilters}
+              className="text-xs text-slate-400 hover:text-slate-600 gap-1.5 h-7 px-2"
+            >
+              <X className="w-3 h-3" />
+              Hapus filter
+            </Button>
+          )}
+        </div>
+
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
           {/* Shop filter — superadmin only */}
           {role === "superadmin" && (
-            <Select
-              value={selectedShopId}
-              onValueChange={(v) => {
-                const val = v ?? "";
-                setSelectedShopId(val);
-                applyFilters(val);
-              }}
-            >
-              <SelectTrigger>
-                <span className="truncate text-sm">
-                  {selectedShopId
-                    ? (shops.find((s) => s.id === selectedShopId)?.name ?? selectedShopId)
-                    : "Semua Toko"}
-                </span>
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="">Semua Toko</SelectItem>
-                {shops.map((s) => (
-                  <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div className="space-y-1.5">
+              <Label className="text-xs text-slate-500">Toko</Label>
+              <Select
+                value={selectedShopId}
+                onValueChange={(v) => {
+                  const val = v ?? "";
+                  setSelectedShopId(val);
+                  applyFilters(val);
+                }}
+              >
+                <SelectTrigger className="h-9 text-sm">
+                  <span className="truncate">
+                    {selectedShopId
+                      ? (shops.find((s) => s.id === selectedShopId)?.name ?? selectedShopId)
+                      : "Semua"}
+                  </span>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Semua</SelectItem>
+                  {shops.map((s) => (
+                    <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           )}
 
           {/* Entity type */}
-          <Select
-            value={filterEntity}
-            onValueChange={(v) => {
-              const val = v ?? "";
-              setFilterEntity(val);
-              setFilterAction("");
-              applyFilters(selectedShopId, val, "");
-            }}
-          >
-            <SelectTrigger>
-              <span className="truncate text-sm">
-                {filterEntity ? (ENTITY_LABEL[filterEntity] ?? filterEntity) : "Semua Entitas"}
-              </span>
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="">Semua Entitas</SelectItem>
-              {ENTITY_TYPES.map((e) => (
-                <SelectItem key={e} value={e}>{ENTITY_LABEL[e]}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div className="space-y-1.5">
+            <Label className="text-xs text-slate-500">Entitas</Label>
+            <Select
+              value={filterEntity}
+              onValueChange={(v) => {
+                const val = v ?? "";
+                setFilterEntity(val);
+                setFilterAction("");
+                applyFilters(selectedShopId, val, "");
+              }}
+            >
+              <SelectTrigger className="h-9 text-sm">
+                <span className="truncate">
+                  {filterEntity ? (ENTITY_LABEL[filterEntity] ?? filterEntity) : "Semua"}
+                </span>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">Semua</SelectItem>
+                {ENTITY_TYPES.map((e) => (
+                  <SelectItem key={e} value={e}>{ENTITY_LABEL[e]}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
           {/* Action */}
-          <Select
-            value={filterAction}
-            onValueChange={(v) => {
-              const val = v ?? "";
-              setFilterAction(val);
-              applyFilters(selectedShopId, filterEntity, val);
-            }}
-          >
-            <SelectTrigger>
-              <span className="truncate text-sm capitalize">
-                {filterAction || "Semua Aksi"}
-              </span>
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="">Semua Aksi</SelectItem>
-              {(filterEntity ? (ACTION_MAP[filterEntity] ?? ALL_ACTIONS) : ALL_ACTIONS).map((a) => (
-                <SelectItem key={a} value={a} className="capitalize">{a.replace(/_/g, " ")}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div className="space-y-1.5">
+            <Label className="text-xs text-slate-500">Aksi</Label>
+            <Select
+              value={filterAction}
+              onValueChange={(v) => {
+                const val = v ?? "";
+                setFilterAction(val);
+                applyFilters(selectedShopId, filterEntity, val);
+              }}
+            >
+              <SelectTrigger className="h-9 text-sm">
+                <span className="truncate capitalize">
+                  {filterAction ? filterAction.replace(/_/g, " ") : "Semua"}
+                </span>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">Semua</SelectItem>
+                {(filterEntity ? (ACTION_MAP[filterEntity] ?? ALL_ACTIONS) : ALL_ACTIONS).map((a) => (
+                  <SelectItem key={a} value={a} className="capitalize">{a.replace(/_/g, " ")}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
           {/* Date from */}
-          <div className="space-y-1">
-            <Label className="text-xs text-slate-400">Dari Tanggal</Label>
+          <div className="space-y-1.5">
+            <Label className="text-xs text-slate-500">Dari Tanggal</Label>
             <Input
               type="date"
               value={filterDateFrom}
@@ -303,8 +325,8 @@ export function AuditLogPage({ role }: AuditLogPageProps) {
           </div>
 
           {/* Date to */}
-          <div className="space-y-1">
-            <Label className="text-xs text-slate-400">Sampai Tanggal</Label>
+          <div className="space-y-1.5">
+            <Label className="text-xs text-slate-500">Sampai Tanggal</Label>
             <Input
               type="date"
               value={filterDateTo}
@@ -314,20 +336,6 @@ export function AuditLogPage({ role }: AuditLogPageProps) {
             />
           </div>
         </div>
-
-        {hasActiveFilters && (
-          <div className="pt-1">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={clearFilters}
-              className="text-xs text-slate-400 hover:text-slate-600 gap-1.5 h-7 px-2"
-            >
-              <X className="w-3 h-3" />
-              Hapus semua filter
-            </Button>
-          </div>
-        )}
       </div>
 
       {error && (
@@ -408,7 +416,7 @@ export function AuditLogPage({ role }: AuditLogPageProps) {
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="h-7 text-xs gap-1 text-slate-400 hover:text-indigo-600"
+                      className="h-7 text-xs gap-1 text-slate-400 hover:text-amber-600"
                       onClick={() => { setDetailLog(log); setDetailOpen(true); }}
                     >
                       <Eye className="w-3 h-3" />
@@ -421,38 +429,12 @@ export function AuditLogPage({ role }: AuditLogPageProps) {
         )}
       </div>
 
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="flex items-center justify-center gap-1">
-          <Button variant="outline" size="icon-sm" onClick={() => changePage(page - 1)} disabled={page <= 1}>
-            <ChevronLeft className="w-4 h-4" />
-          </Button>
-          {Array.from({ length: totalPages }, (_, i) => i + 1)
-            .filter((p) => p === 1 || p === totalPages || Math.abs(p - page) <= 1)
-            .reduce<(number | "…")[]>((acc, p, idx, arr) => {
-              if (idx > 0 && (arr[idx - 1] as number) + 1 < p) acc.push("…");
-              acc.push(p);
-              return acc;
-            }, [])
-            .map((p, idx) =>
-              p === "…" ? (
-                <span key={`e${idx}`} className="px-1 text-slate-400 text-sm">…</span>
-              ) : (
-                <Button
-                  key={p}
-                  variant={p === page ? "default" : "outline"}
-                  size="icon-sm"
-                  onClick={() => changePage(p as number)}
-                >
-                  {p}
-                </Button>
-              )
-            )}
-          <Button variant="outline" size="icon-sm" onClick={() => changePage(page + 1)} disabled={page >= totalPages}>
-            <ChevronRight className="w-4 h-4" />
-          </Button>
-        </div>
-      )}
+      <Pagination
+        page={page}
+        totalPages={totalPages}
+        onPageChange={changePage}
+        pageSize={20}
+      />
 
       {/* ── Detail Dialog ─────────────────────────────────────────────────────── */}
       <Dialog open={detailOpen} onOpenChange={setDetailOpen}>

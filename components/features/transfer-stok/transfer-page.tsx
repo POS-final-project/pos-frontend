@@ -12,6 +12,7 @@ import {
   Search,
   PackageSearch,
 } from "lucide-react";
+import { Pagination } from "@/components/ui/pagination";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -43,6 +44,7 @@ import { useToast } from "@/components/ui/toast";
 import { cn } from "@/lib/utils";
 import { api } from "@/lib/api";
 import { getUser } from "@/lib/auth";
+import { PageHeader } from "@/components/layout/page-header";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -153,6 +155,11 @@ export function TransferPage({ role }: TransferPageProps) {
   const [incoming, setIncoming] = useState<Transfer[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("");
+  const [outPage, setOutPage] = useState(1);
+  const [inPage, setInPage] = useState(1);
+  const [outTotal, setOutTotal] = useState(1);
+  const [inTotal, setInTotal] = useState(1);
 
   // Detail dialog
   const [detailOpen, setDetailOpen] = useState(false);
@@ -191,21 +198,24 @@ export function TransferPage({ role }: TransferPageProps) {
   // ─── Fetchers ──────────────────────────────────────────────────────────────
 
   const fetchTransfers = useCallback(
-    async (shopId: string) => {
+    async (shopId: string, status: string, outPg: number, inPg: number) => {
       setLoading(true);
       setError("");
       try {
         const shopParam = shopId ? `shopId=${shopId}&` : "";
+        const statusParam = status ? `status=${status}&` : "";
         const [outRes, inRes] = await Promise.all([
-          api.get<{ data: unknown }>(
-            `/api/transfers/outgoing?${shopParam}page=1&limit=100`,
+          api.get<{ data: unknown; meta?: Record<string, number> }>(
+            `/api/transfers/outgoing?${shopParam}${statusParam}page=${outPg}&limit=20`,
           ),
-          api.get<{ data: unknown }>(
-            `/api/transfers/incoming?${shopParam}page=1&limit=100`,
+          api.get<{ data: unknown; meta?: Record<string, number> }>(
+            `/api/transfers/incoming?${shopParam}${statusParam}page=${inPg}&limit=20`,
           ),
         ]);
         setOutgoing(extractList<Transfer>(outRes.data));
         setIncoming(extractList<Transfer>(inRes.data));
+        setOutTotal(outRes.meta?.totalPages ?? 1);
+        setInTotal(inRes.meta?.totalPages ?? 1);
       } catch (err) {
         setError(err instanceof Error ? err.message : "Gagal memuat transfer");
       } finally {
@@ -235,7 +245,7 @@ export function TransferPage({ role }: TransferPageProps) {
   useEffect(() => {
     const init = async () => {
       await fetchShops();
-      fetchTransfers(role === "superadmin" ? "" : (user?.shopId ?? ""));
+      fetchTransfers(role === "superadmin" ? "" : (user?.shopId ?? ""), "", 1, 1);
     };
     init();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -244,9 +254,20 @@ export function TransferPage({ role }: TransferPageProps) {
   // Re-fetch when shopId changes (superadmin filter)
   useEffect(() => {
     if (role === "superadmin") {
-      fetchTransfers(selectedShopId);
+      setOutPage(1);
+      setInPage(1);
+      fetchTransfers(selectedShopId, statusFilter, 1, 1);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedShopId, role, fetchTransfers]);
+
+  // Status filter changes — reset pages and refetch both tabs
+  useEffect(() => {
+    setOutPage(1);
+    setInPage(1);
+    fetchTransfers(selectedShopId, statusFilter, 1, 1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [statusFilter]);
 
   // ─── Product search (debounced) ─────────────────────────────────────────────
 
@@ -305,7 +326,7 @@ export function TransferPage({ role }: TransferPageProps) {
       const actionLabel = type === "approve" ? "diterima" : type === "reject" ? "ditolak" : "dibatalkan";
       toast({ title: `Transfer berhasil ${actionLabel}`, variant: "success" });
       setConfirmDialog(null);
-      fetchTransfers(selectedShopId || (user?.shopId ?? ""));
+      fetchTransfers(selectedShopId || (user?.shopId ?? ""), statusFilter, outPage, inPage);
     } catch (err) {
       toast({
         title: "Aksi gagal",
@@ -388,7 +409,9 @@ export function TransferPage({ role }: TransferPageProps) {
       toast({ title: "Transfer stok berhasil dibuat", variant: "success" });
       setCreateOpen(false);
       resetCreateForm();
-      fetchTransfers(selectedShopId || (user?.shopId ?? ""));
+      setOutPage(1);
+      setInPage(1);
+      fetchTransfers(selectedShopId || (user?.shopId ?? ""), statusFilter, 1, 1);
     } catch (err) {
       setCreateError(err instanceof Error ? err.message : "Gagal membuat transfer");
     } finally {
@@ -511,43 +534,40 @@ export function TransferPage({ role }: TransferPageProps) {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <div>
-          <h1 className="text-xl font-semibold text-slate-900">Transfer Stok</h1>
-          <p className="text-sm text-slate-500 mt-0.5">
-            Kelola transfer stok antar toko
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
-          {role === "superadmin" && shops.length > 0 && (
-            <Select
-              value={selectedShopId}
-              onValueChange={(v) => setSelectedShopId(v ?? "")}
-            >
-              <SelectTrigger className="w-44">
-                <span className="truncate text-sm">
-                  {selectedShopId
-                    ? (shops.find((s) => s.id === selectedShopId)?.name ?? selectedShopId)
-                    : "Semua Toko"}
-                </span>
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="">Semua Toko</SelectItem>
-                {shops.map((s) => (
-                  <SelectItem key={s.id} value={s.id}>
-                    {s.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
-          <Button onClick={openCreate} className="gap-2">
-            <Plus className="w-4 h-4" />
-            Buat Transfer
-          </Button>
-        </div>
-      </div>
+      <PageHeader
+        title="Transfer Stok"
+        description="Kelola transfer stok antar toko"
+        action={
+          <div className="flex items-center gap-3">
+            {role === "superadmin" && shops.length > 0 && (
+              <Select
+                value={selectedShopId}
+                onValueChange={(v) => setSelectedShopId(v ?? "")}
+              >
+                <SelectTrigger className="w-44">
+                  <span className="truncate text-sm">
+                    {selectedShopId
+                      ? (shops.find((s) => s.id === selectedShopId)?.name ?? selectedShopId)
+                      : "Semua Toko"}
+                  </span>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Semua Toko</SelectItem>
+                  {shops.map((s) => (
+                    <SelectItem key={s.id} value={s.id}>
+                      {s.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+            <Button onClick={openCreate} className="gap-2">
+              <Plus className="w-4 h-4" />
+              Buat Transfer
+            </Button>
+          </div>
+        }
+      />
 
       {/* Tabs */}
       <div className="flex gap-1 border-b border-slate-200">
@@ -563,7 +583,7 @@ export function TransferPage({ role }: TransferPageProps) {
             className={cn(
               "flex items-center gap-2 px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors",
               tab === key
-                ? "border-indigo-600 text-indigo-600"
+                ? "border-amber-500 text-amber-600"
                 : "border-transparent text-slate-500 hover:text-slate-700",
             )}
           >
@@ -578,6 +598,24 @@ export function TransferPage({ role }: TransferPageProps) {
           {error}
         </div>
       )}
+
+      {/* Filter bar */}
+      <div className="flex items-center gap-3">
+        <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <SelectTrigger className="w-44">
+            <span className="text-sm">
+              {statusFilter ? STATUS_LABEL[statusFilter as TransferStatus] : "Semua Status"}
+            </span>
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="">Semua Status</SelectItem>
+            <SelectItem value="pending">Menunggu</SelectItem>
+            <SelectItem value="approved">Disetujui</SelectItem>
+            <SelectItem value="rejected">Ditolak</SelectItem>
+            <SelectItem value="cancelled">Dibatalkan</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
 
       {/* List */}
       <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
@@ -624,6 +662,21 @@ export function TransferPage({ role }: TransferPageProps) {
           </div>
         )}
       </div>
+
+      <Pagination
+        page={tab === "outgoing" ? outPage : inPage}
+        totalPages={tab === "outgoing" ? outTotal : inTotal}
+        pageSize={20}
+        onPageChange={(newPg) => {
+          if (tab === "outgoing") {
+            setOutPage(newPg);
+            fetchTransfers(selectedShopId || (user?.shopId ?? ""), statusFilter, newPg, inPage);
+          } else {
+            setInPage(newPg);
+            fetchTransfers(selectedShopId || (user?.shopId ?? ""), statusFilter, outPage, newPg);
+          }
+        }}
+      />
 
       {/* ── Detail Dialog ────────────────────────────────────────────────────── */}
       <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
@@ -871,7 +924,7 @@ export function TransferPage({ role }: TransferPageProps) {
                         <button
                           key={p.id}
                           type="button"
-                          className="w-full text-left px-3 py-2 text-sm hover:bg-indigo-50 hover:text-indigo-700 transition-colors"
+                          className="w-full text-left px-3 py-2 text-sm hover:bg-amber-50 hover:text-amber-700 transition-colors"
                           onClick={() => {
                             setSelectedProduct(p);
                             setSearchQuery(p.name);

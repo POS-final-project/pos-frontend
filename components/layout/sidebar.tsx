@@ -218,10 +218,10 @@ function NavGroupSection({
         className={cn(
           "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors text-left",
           isOpen
-            ? "text-slate-300 hover:bg-slate-800"
+            ? "text-slate-300 hover:bg-white/8"
             : hasActive
-              ? "text-indigo-400 hover:bg-slate-800"
-              : "text-slate-400 hover:bg-slate-800 hover:text-slate-100",
+              ? "text-amber-400 hover:bg-white/8"
+              : "text-slate-400 hover:bg-white/8 hover:text-slate-100",
         )}
       >
         <GroupIcon className="w-4 h-4 shrink-0" />
@@ -242,7 +242,7 @@ function NavGroupSection({
         )}
       >
         <div className="overflow-hidden">
-          <ul className="ml-3.5 pl-3 border-l border-slate-700/50 mt-1 mb-1 space-y-0.5">
+          <ul className="ml-3.5 pl-3 border-l border-white/10 mt-1 mb-1 space-y-0.5">
             {group.items.map((item) => {
               const active = isGroupItemActive(item.href, pathname);
               const Icon = item.icon;
@@ -254,8 +254,8 @@ function NavGroupSection({
                     className={cn(
                       "flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm font-medium transition-all duration-150",
                       active
-                        ? "bg-indigo-500/20 text-indigo-300 shadow-sm ring-1 ring-indigo-500/30"
-                        : "text-slate-400 hover:bg-slate-800/70 hover:text-slate-100",
+                        ? "bg-white/8 text-amber-400"
+                        : "text-slate-400 hover:bg-white/8 hover:text-slate-100",
                     )}
                   >
                     <Icon className="w-3.5 h-3.5 shrink-0" />
@@ -343,10 +343,10 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
 
   const roleBadgeClass =
     role === "superadmin"
-      ? "bg-indigo-500/20 text-indigo-300 ring-1 ring-indigo-500/30"
+      ? "bg-amber-500/20 text-amber-300 ring-1 ring-amber-500/30"
       : role === "admin"
-        ? "bg-violet-500/20 text-violet-300 ring-1 ring-violet-500/30"
-        : "bg-slate-700/60 text-slate-400 ring-1 ring-slate-600/40";
+        ? "bg-orange-500/20 text-orange-300 ring-1 ring-orange-500/30"
+        : "bg-white/10 text-slate-400 ring-1 ring-white/15";
 
   const displayName = authUser?.name ?? (role === "superadmin" ? "Super Admin" : role === "admin" ? "Admin Toko" : "Kasir");
   const displayEmail = authUser?.email ?? "";
@@ -360,16 +360,16 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
       className={cn(
         "fixed top-0 left-0 z-50 h-full w-64 flex-shrink-0",
         "flex flex-col text-slate-100",
-        "bg-gradient-to-b from-slate-900 via-slate-900 to-slate-800/95",
+        "bg-[oklch(0.09_0.01_260)]",
         "transition-transform duration-300 ease-in-out",
         "lg:static lg:z-auto lg:translate-x-0",
         isOpen ? "translate-x-0" : "-translate-x-full",
       )}
     >
       {/* Brand */}
-      <div className="flex items-center gap-3 px-5 py-5 border-b border-slate-700/40 flex-shrink-0">
-        <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-indigo-700 flex items-center justify-center flex-shrink-0 shadow-lg shadow-indigo-900/40">
-          <ShoppingCart className="w-5 h-5 text-white" />
+      <div className="flex items-center gap-3 px-5 py-5 border-b border-white/8 flex-shrink-0">
+        <div className="w-9 h-9 rounded-xl bg-amber-500 flex items-center justify-center flex-shrink-0">
+          <ShoppingCart className="w-5 h-5 text-amber-950" />
         </div>
         <div className="flex-1 min-w-0">
           <p className="font-bold text-white text-sm leading-tight truncate tracking-wide">
@@ -415,8 +415,8 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                   className={cn(
                     "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150",
                     active
-                      ? "bg-indigo-500/20 text-indigo-300 shadow-sm ring-1 ring-indigo-500/30"
-                      : "text-slate-400 hover:bg-slate-800/70 hover:text-slate-100",
+                      ? "bg-amber-500/15 text-amber-300 shadow-sm ring-1 ring-amber-500/25"
+                      : "text-slate-400 hover:bg-white/8 hover:text-slate-100",
                   )}
                 >
                   <Icon className="w-4 h-4 shrink-0" />
@@ -429,9 +429,9 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
       </nav>
 
       {/* Footer — user info */}
-      <div className="px-3 py-3 border-t border-slate-700/40 flex-shrink-0">
-        <div className="flex items-center gap-2.5 px-2 py-2 rounded-lg hover:bg-slate-800/60 transition-colors cursor-default">
-          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-indigo-700 flex items-center justify-center flex-shrink-0 text-xs font-bold text-white shadow shadow-indigo-900/40">
+      <div className="px-3 py-3 border-t border-white/8 flex-shrink-0">
+        <div className="flex items-center gap-2.5 px-2 py-2 rounded-lg hover:bg-white/8 transition-colors cursor-default">
+          <div className="w-8 h-8 rounded-full bg-amber-500 flex items-center justify-center flex-shrink-0 text-xs font-bold text-amber-950">
             {getInitials(displayName)}
           </div>
           <div className="flex-1 min-w-0">

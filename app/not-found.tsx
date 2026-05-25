@@ -6,10 +6,10 @@ export default function NotFound() {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50">
       <div className="text-center">
-        <div className="w-20 h-20 rounded-2xl bg-indigo-100 flex items-center justify-center mx-auto mb-6">
-          <FileQuestion className="w-10 h-10 text-indigo-600" />
+        <div className="w-20 h-20 rounded-2xl bg-amber-100 flex items-center justify-center mx-auto mb-6">
+          <FileQuestion className="w-10 h-10 text-amber-600" />
         </div>
-        <p className="text-8xl font-bold text-indigo-600 mb-4">404</p>
+        <p className="text-8xl font-bold text-amber-600 mb-4">404</p>
         <h1 className="text-2xl font-semibold text-slate-800 mb-2">
           Halaman Tidak Ditemukan
         </h1>

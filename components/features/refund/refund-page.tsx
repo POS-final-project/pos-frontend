@@ -2,8 +2,9 @@
 
 import { useState, useEffect, useCallback } from "react";
 import {
-  Plus, Eye, RotateCcw, Search, ChevronLeft, ChevronRight,
+  Plus, Eye, RotateCcw, Search,
 } from "lucide-react";
+import { Pagination } from "@/components/ui/pagination";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -21,6 +22,7 @@ import { TableSkeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/components/ui/toast";
 import { api } from "@/lib/api";
 import { getUser } from "@/lib/auth";
+import { PageHeader } from "@/components/layout/page-header";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -170,11 +172,9 @@ export function RefundPage({ role }: RefundPageProps) {
       params.set("page", String(pg));
       params.set("limit", "20");
       if (shopId) params.set("shopId", shopId);
-      const res = await api.get<{ data: unknown }>(`/api/refunds?${params.toString()}`);
-      const obj = res.data as Record<string, unknown>;
-      setRefunds(Array.isArray(obj.data) ? (obj.data as Refund[]) : []);
-      const meta = obj.meta as Record<string, unknown> | undefined;
-      setTotalPages(typeof meta?.totalPages === "number" ? meta.totalPages : 1);
+      const res = await api.get<{ success: boolean; data: unknown; meta?: Record<string, number> }>(`/api/refunds?${params.toString()}`);
+      setRefunds(Array.isArray(res.data) ? (res.data as Refund[]) : []);
+      setTotalPages(res.meta?.totalPages ?? 1);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Gagal memuat refund");
     } finally {
@@ -230,8 +230,8 @@ export function RefundPage({ role }: RefundPageProps) {
     try {
       const res = await api.get<{ data: unknown }>(`/api/transactions/${id}`);
       const tx = (res.data as Record<string, unknown>).data as Transaction;
-      if (tx.status !== "completed") {
-        setTxSearchError("Transaksi belum berstatus 'completed' — hanya transaksi yang sudah selesai dapat direfund");
+      if (tx.status !== "selesai") {
+        setTxSearchError("Hanya transaksi yang sudah selesai yang dapat direfund");
         return;
       }
       setFoundTx(tx);
@@ -296,44 +296,44 @@ export function RefundPage({ role }: RefundPageProps) {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <div>
-          <h1 className="text-xl font-semibold text-slate-900">Refund</h1>
-          <p className="text-sm text-slate-500 mt-0.5">Riwayat pengembalian barang dari transaksi</p>
-        </div>
-        <div className="flex items-center gap-2">
-          {role === "superadmin" && shops.length > 0 && (
-            <Select
-              value={selectedShopId}
-              onValueChange={(v) => {
-                const val = v ?? "";
-                setSelectedShopId(val);
-                setPage(1);
-                fetchRefunds(val, 1);
-              }}
-            >
-              <SelectTrigger className="w-44">
-                <span className="truncate text-sm">
-                  {selectedShopId
-                    ? (shops.find((s) => s.id === selectedShopId)?.name ?? selectedShopId)
-                    : "Semua Toko"}
-                </span>
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="">Semua Toko</SelectItem>
-                {shops.map((s) => (
-                  <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
-          <Button onClick={() => { resetCreate(); setCreateOpen(true); }} className="gap-2">
-            <Plus className="w-4 h-4" />
-            Buat Refund
-          </Button>
-        </div>
-      </div>
+      <PageHeader
+        title="Refund"
+        description="Riwayat pengembalian barang dari transaksi"
+        count={loading ? undefined : refunds.length}
+        action={
+          <div className="flex items-center gap-2">
+            {role === "superadmin" && shops.length > 0 && (
+              <Select
+                value={selectedShopId}
+                onValueChange={(v) => {
+                  const val = v ?? "";
+                  setSelectedShopId(val);
+                  setPage(1);
+                  fetchRefunds(val, 1);
+                }}
+              >
+                <SelectTrigger className="w-44">
+                  <span className="truncate text-sm">
+                    {selectedShopId
+                      ? (shops.find((s) => s.id === selectedShopId)?.name ?? selectedShopId)
+                      : "Semua Toko"}
+                  </span>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Semua Toko</SelectItem>
+                  {shops.map((s) => (
+                    <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+            <Button onClick={() => { resetCreate(); setCreateOpen(true); }} className="gap-2">
+              <Plus className="w-4 h-4" />
+              Buat Refund
+            </Button>
+          </div>
+        }
+      />
 
       {error && (
         <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-4 py-3">
@@ -403,7 +403,7 @@ export function RefundPage({ role }: RefundPageProps) {
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="h-7 text-xs gap-1 text-slate-500 hover:text-indigo-600"
+                      className="h-7 text-xs gap-1 text-slate-500 hover:text-amber-600"
                       onClick={() => openDetail(r)}
                     >
                       <Eye className="w-3 h-3" />
@@ -417,38 +417,12 @@ export function RefundPage({ role }: RefundPageProps) {
         )}
       </div>
 
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="flex items-center justify-center gap-1">
-          <Button variant="outline" size="icon-sm" onClick={() => changePage(page - 1)} disabled={page <= 1}>
-            <ChevronLeft className="w-4 h-4" />
-          </Button>
-          {Array.from({ length: totalPages }, (_, i) => i + 1)
-            .filter((p) => p === 1 || p === totalPages || Math.abs(p - page) <= 1)
-            .reduce<(number | "…")[]>((acc, p, idx, arr) => {
-              if (idx > 0 && (arr[idx - 1] as number) + 1 < p) acc.push("…");
-              acc.push(p);
-              return acc;
-            }, [])
-            .map((p, idx) =>
-              p === "…" ? (
-                <span key={`e${idx}`} className="px-1 text-slate-400 text-sm">…</span>
-              ) : (
-                <Button
-                  key={p}
-                  variant={p === page ? "default" : "outline"}
-                  size="icon-sm"
-                  onClick={() => changePage(p as number)}
-                >
-                  {p}
-                </Button>
-              )
-            )}
-          <Button variant="outline" size="icon-sm" onClick={() => changePage(page + 1)} disabled={page >= totalPages}>
-            <ChevronRight className="w-4 h-4" />
-          </Button>
-        </div>
-      )}
+      <Pagination
+        page={page}
+        totalPages={totalPages}
+        onPageChange={changePage}
+        pageSize={20}
+      />
 
       {/* ── Detail Dialog ─────────────────────────────────────────────────────── */}
       <Dialog open={detailOpen} onOpenChange={setDetailOpen}>

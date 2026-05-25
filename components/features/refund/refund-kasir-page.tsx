@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { api } from "@/lib/api";
+import { PageHeader } from "@/components/layout/page-header";
 import { useToast } from "@/components/ui/toast";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -82,12 +83,10 @@ export function RefundKasirPage() {
     setSearchLoading(true);
     setSearchError("");
     try {
-      const res = await api.get<{ data: unknown }>(`/api/transactions/${id}`);
-      const tx = (res.data as Record<string, unknown>).data as Transaction;
-      if (tx.status !== "completed") {
-        setSearchError(
-          "Transaksi belum berstatus 'completed' — hanya transaksi yang sudah selesai dapat direfund"
-        );
+      const res = await api.get<{ success: boolean; data: Transaction }>(`/api/transactions/${id}`);
+      const tx = res.data;
+      if (!tx || tx.status !== "selesai") {
+        setSearchError("Hanya transaksi yang sudah selesai yang dapat direfund");
         return;
       }
       setFoundTx(tx);
@@ -147,20 +146,17 @@ export function RefundKasirPage() {
 
   return (
     <div className="space-y-6 max-w-2xl">
-      {/* Header */}
-      <div>
-        <h1 className="text-xl font-semibold text-slate-900">Refund</h1>
-        <p className="text-sm text-slate-500 mt-0.5">
-          Proses pengembalian barang dari transaksi yang sudah selesai
-        </p>
-      </div>
+      <PageHeader
+        title="Refund"
+        description="Proses pengembalian barang dari transaksi yang sudah selesai"
+      />
 
       {step === "search" ? (
         /* ── Step 1: Search ──────────────────────────────────────────── */
         <div className="bg-white rounded-xl border border-slate-200 p-6 space-y-5">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-lg bg-indigo-50 flex items-center justify-center shrink-0">
-              <Search className="w-4 h-4 text-indigo-600" />
+            <div className="w-9 h-9 rounded-lg bg-amber-50 flex items-center justify-center shrink-0">
+              <Search className="w-4 h-4 text-amber-600" />
             </div>
             <div>
               <p className="font-medium text-slate-800 text-sm">Cari Transaksi</p>

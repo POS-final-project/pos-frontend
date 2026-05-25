@@ -59,7 +59,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
               "animate-in slide-in-from-right-4 fade-in-0 duration-200",
               t.variant === "success" && "bg-white border-green-200",
               t.variant === "error"   && "bg-white border-red-200",
-              t.variant === "info"    && "bg-white border-indigo-200",
+              t.variant === "info"    && "bg-white border-amber-200",
             )}
           >
             {t.variant === "success" && (
@@ -69,7 +69,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
               <XCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
             )}
             {t.variant === "info" && (
-              <Info className="w-5 h-5 text-indigo-500 flex-shrink-0 mt-0.5" />
+              <Info className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
             )}
             <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold text-slate-800 leading-tight">

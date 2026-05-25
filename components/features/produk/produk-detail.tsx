@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import { ArrowLeft, ImageOff, Pencil, Plus, Trash2 } from "lucide-react";
+import { ArrowLeft, ImageOff, Pencil, Plus, ScanBarcode, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
@@ -15,6 +15,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { api } from "@/lib/api";
+import { FileInput } from "@/components/ui/file-input";
 
 function extractList<T>(data: unknown): T[] {
   if (Array.isArray(data)) return data as T[];
@@ -58,6 +59,7 @@ type Variant = {
   id: string;
   name: string;
   sku: string;
+  barcode?: string | null;
   price: string | number; // API returns price as string "7000.00"
   image_url?: string | null;
   is_active?: boolean;
@@ -117,6 +119,7 @@ export function ProdukDetail({
   const [variantDialog, setVariantDialog] = useState(false);
   const [vName, setVName] = useState("");
   const [vSku, setVSku] = useState("");
+  const [vBarcode, setVBarcode] = useState("");
   const [vPrice, setVPrice] = useState("");
   const [vImageFile, setVImageFile] = useState<File | null>(null);
   const [vLoading, setVLoading] = useState(false);
@@ -126,6 +129,7 @@ export function ProdukDetail({
   const [editDialog, setEditDialog] = useState(false);
   const [editingVariant, setEditingVariant] = useState<Variant | null>(null);
   const [evName, setEvName] = useState("");
+  const [evBarcode, setEvBarcode] = useState("");
   const [evPrice, setEvPrice] = useState("");
   const [evIsActive, setEvIsActive] = useState(true);
   const [evImageFile, setEvImageFile] = useState<File | null>(null);
@@ -175,6 +179,7 @@ export function ProdukDetail({
       const formData = new FormData();
       formData.append("name", vName);
       formData.append("sku", vSku);
+      if (vBarcode.trim()) formData.append("barcode", vBarcode.trim());
       formData.append("price", vPrice);
       if (vImageFile) {
         formData.append("image", vImageFile);
@@ -184,6 +189,7 @@ export function ProdukDetail({
       setVariantDialog(false);
       setVName("");
       setVSku("");
+      setVBarcode("");
       setVPrice("");
       setVImageFile(null);
       fetchProduct();
@@ -197,6 +203,7 @@ export function ProdukDetail({
   function openEditVariant(variant: Variant) {
     setEditingVariant(variant);
     setEvName(variant.name);
+    setEvBarcode(variant.barcode ?? "");
     setEvPrice(String(variant.price));
     setEvIsActive(variant.is_active !== false);
     setEvImageFile(null);
@@ -213,6 +220,7 @@ export function ProdukDetail({
     try {
       const formData = new FormData();
       formData.append("name", evName);
+      formData.append("barcode", evBarcode.trim());
       formData.append("price", evPrice);
       formData.append("is_active", String(evIsActive));
       if (evImageFile) {
@@ -360,8 +368,13 @@ export function ProdukDetail({
                     )}
                   </div>
                   <p className="truncate text-xs font-mono text-slate-400">
-                    {v.sku}
+                    SKU: {v.sku}
                   </p>
+                  {v.barcode && (
+                    <p className="truncate text-xs font-mono text-slate-400">
+                      Barcode: {v.barcode}
+                    </p>
+                  )}
                 </div>
                 <div className="flex items-center gap-2">
                   <p className="text-sm font-semibold text-slate-900">
@@ -404,52 +417,92 @@ export function ProdukDetail({
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
             <DialogTitle>Tambah Variant</DialogTitle>
+            {product && (
+              <p className="text-sm text-slate-500">{product.name}</p>
+            )}
           </DialogHeader>
-          <form onSubmit={handleAddVariant} className="space-y-4">
+          <form onSubmit={handleAddVariant} className="space-y-3.5">
             <div className="space-y-1.5">
-              <Label>Nama Variant</Label>
+              <Label>
+                Nama Variant <span className="text-red-500">*</span>
+              </Label>
               <Input
-                placeholder="cth. Large"
+                placeholder="cth. Large / Merah / 500ml"
                 value={vName}
                 onChange={(e) => setVName(e.target.value)}
                 required
                 autoFocus
               />
             </div>
-            <div className="space-y-1.5">
-              <Label>SKU</Label>
-              <Input
-                placeholder="cth. PROD-LG"
-                value={vSku}
-                onChange={(e) => setVSku(e.target.value)}
-                required
-              />
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label>
+                  SKU <span className="text-red-500">*</span>
+                </Label>
+                <Input
+                  placeholder="cth. PROD-LG"
+                  value={vSku}
+                  onChange={(e) => setVSku(e.target.value)}
+                  required
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>
+                  Harga <span className="text-red-500">*</span>
+                </Label>
+                <Input
+                  type="number"
+                  placeholder="0"
+                  value={vPrice}
+                  onChange={(e) => setVPrice(e.target.value)}
+                  required
+                  min={0}
+                />
+              </div>
             </div>
+
             <div className="space-y-1.5">
-              <Label>Harga</Label>
+              <Label className="flex items-center gap-1.5">
+                Barcode{" "}
+                <span className="text-xs font-normal text-slate-400">(opsional)</span>
+                <ScanBarcode className="w-3.5 h-3.5 text-slate-400 ml-auto" />
+              </Label>
               <Input
-                type="number"
-                placeholder="0"
-                value={vPrice}
-                onChange={(e) => setVPrice(e.target.value)}
-                required
-                min={0}
+                placeholder="Scan atau ketik barcode..."
+                value={vBarcode}
+                onChange={(e) => setVBarcode(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") e.preventDefault(); }}
               />
+              <p className="text-xs text-slate-400">Fokus ke kolom ini lalu scan dengan barcode scanner</p>
             </div>
+
             <div className="space-y-1.5">
-              <Label>Foto (opsional)</Label>
-              <Input
-                type="file"
+              <Label>
+                Foto{" "}
+                <span className="text-xs font-normal text-slate-400">(opsional)</span>
+              </Label>
+              <FileInput
                 accept="image/jpeg,image/png,image/webp"
-                onChange={(e) => setVImageFile(e.target.files?.[0] ?? null)}
+                onChange={setVImageFile}
               />
-              {vImageFile && (
-                <p className="text-xs text-slate-500">{vImageFile.name}</p>
-              )}
             </div>
-            {vError && <p className="text-sm text-red-600">{vError}</p>}
+
+            {vError && (
+              <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+                {vError}
+              </p>
+            )}
             <DialogFooter>
-              <Button type="submit" disabled={vLoading} className="w-full">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setVariantDialog(false)}
+                disabled={vLoading}
+              >
+                Batal
+              </Button>
+              <Button type="submit" disabled={vLoading}>
                 {vLoading ? "Menyimpan..." : "Tambah Variant"}
               </Button>
             </DialogFooter>
@@ -462,58 +515,110 @@ export function ProdukDetail({
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
             <DialogTitle>Edit Variant</DialogTitle>
+            {editingVariant && (
+              <p className="text-xs font-mono text-slate-400">
+                SKU: {editingVariant.sku}
+              </p>
+            )}
           </DialogHeader>
-          <form onSubmit={handleEditVariant} className="space-y-4">
-            <div className="space-y-1.5">
-              <Label>Nama Variant</Label>
-              <Input
-                placeholder="cth. Default Updated"
-                value={evName}
-                onChange={(e) => setEvName(e.target.value)}
-                required
-                autoFocus
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Harga</Label>
-              <Input
-                type="number"
-                placeholder="0"
-                value={evPrice}
-                onChange={(e) => setEvPrice(e.target.value)}
-                required
-                min={0}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Status Active</Label>
-              <label className="flex items-center gap-2 text-sm text-slate-700">
-                <input
-                  type="checkbox"
-                  checked={evIsActive}
-                  onChange={(e) => setEvIsActive(e.target.checked)}
+          <form onSubmit={handleEditVariant} className="space-y-3.5">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5 col-span-2">
+                <Label>
+                  Nama Variant <span className="text-red-500">*</span>
+                </Label>
+                <Input
+                  placeholder="cth. Default"
+                  value={evName}
+                  onChange={(e) => setEvName(e.target.value)}
+                  required
+                  autoFocus
                 />
-                Aktif
-              </label>
+              </div>
+              <div className="space-y-1.5">
+                <Label>
+                  Harga <span className="text-red-500">*</span>
+                </Label>
+                <Input
+                  type="number"
+                  placeholder="0"
+                  value={evPrice}
+                  onChange={(e) => setEvPrice(e.target.value)}
+                  required
+                  min={0}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Status</Label>
+                <div className="flex gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setEvIsActive(true)}
+                    className={`flex-1 h-9 rounded-lg border text-sm transition-colors ${
+                      evIsActive
+                        ? "bg-green-50 border-green-400 text-green-700 font-medium"
+                        : "border-slate-200 text-slate-500 hover:border-slate-300"
+                    }`}
+                  >
+                    Aktif
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setEvIsActive(false)}
+                    className={`flex-1 h-9 rounded-lg border text-sm transition-colors ${
+                      !evIsActive
+                        ? "bg-red-50 border-red-300 text-red-600 font-medium"
+                        : "border-slate-200 text-slate-500 hover:border-slate-300"
+                    }`}
+                  >
+                    Nonaktif
+                  </button>
+                </div>
+              </div>
             </div>
+
             <div className="space-y-1.5">
-              <Label>Ganti Foto (opsional)</Label>
+              <Label className="flex items-center gap-1.5">
+                Barcode{" "}
+                <span className="text-xs font-normal text-slate-400">(opsional)</span>
+                <ScanBarcode className="w-3.5 h-3.5 text-slate-400 ml-auto" />
+              </Label>
               <Input
-                type="file"
-                accept="image/jpeg,image/png,image/webp"
-                onChange={(e) => setEvImageFile(e.target.files?.[0] ?? null)}
+                placeholder="Scan atau ketik barcode..."
+                value={evBarcode}
+                onChange={(e) => setEvBarcode(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") e.preventDefault(); }}
               />
-              {evImageFile ? (
-                <p className="text-xs text-slate-500">{evImageFile.name}</p>
-              ) : (
-                <p className="text-xs text-slate-400">
-                  Kosongkan jika tidak ingin mengubah foto
-                </p>
-              )}
+              <p className="text-xs text-slate-400">Kosongkan untuk menghapus barcode</p>
             </div>
-            {evError && <p className="text-sm text-red-600">{evError}</p>}
+
+            <div className="space-y-1.5">
+              <Label>
+                Ganti Foto{" "}
+                <span className="text-xs font-normal text-slate-400">(opsional)</span>
+              </Label>
+              <FileInput
+                accept="image/jpeg,image/png,image/webp"
+                placeholder="Kosongkan jika tidak ingin mengubah"
+                onChange={setEvImageFile}
+              />
+            </div>
+
+            {evError && (
+              <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+                {evError}
+              </p>
+            )}
             <DialogFooter>
-              <Button type="submit" disabled={evLoading} className="w-full">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setEditDialog(false)}
+                disabled={evLoading}
+              >
+                Batal
+              </Button>
+              <Button type="submit" disabled={evLoading}>
                 {evLoading ? "Menyimpan..." : "Simpan Perubahan"}
               </Button>
             </DialogFooter>

@@ -27,6 +27,7 @@ import { useToast } from "@/components/ui/toast";
 import { api } from "@/lib/api";
 import { getUser } from "@/lib/auth";
 import { cn } from "@/lib/utils";
+import { PageHeader } from "@/components/layout/page-header";
 
 function extractList<T>(data: unknown): T[] {
   if (Array.isArray(data)) return data as T[];
@@ -282,20 +283,19 @@ export function TokoPage({ role }: TokoPageProps) {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-semibold text-slate-900">Toko</h1>
-          <p className="text-sm text-slate-500 mt-0.5">
-            {canCreate ? "Kelola semua cabang toko" : "Informasi toko Anda"}
-          </p>
-        </div>
-        {canCreate && (
-          <Button onClick={openCreate} className="gap-2">
-            <Plus className="w-4 h-4" />
-            Tambah Toko
-          </Button>
-        )}
-      </div>
+      <PageHeader
+        title="Toko"
+        description={canCreate ? "Kelola semua cabang toko" : "Informasi toko Anda"}
+        count={loading ? undefined : shops.length}
+        action={
+          canCreate ? (
+            <Button onClick={openCreate} className="gap-2">
+              <Plus className="w-4 h-4" />
+              Tambah Toko
+            </Button>
+          ) : undefined
+        }
+      />
 
       {error && (
         <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-4 py-3">
@@ -358,7 +358,7 @@ export function TokoPage({ role }: TokoPageProps) {
                         size="icon-sm"
                         onClick={() => openStaff(shop)}
                         title="Kelola Staff"
-                        className="text-slate-500 hover:text-indigo-600"
+                        className="text-slate-500 hover:text-amber-600"
                       >
                         <Users className="w-3.5 h-3.5" />
                       </Button>
@@ -366,7 +366,7 @@ export function TokoPage({ role }: TokoPageProps) {
                         variant="ghost"
                         size="icon-sm"
                         onClick={() => openEdit(shop)}
-                        className="text-slate-500 hover:text-indigo-600"
+                        className="text-slate-500 hover:text-amber-600"
                       >
                         <Pencil className="w-3.5 h-3.5" />
                       </Button>
@@ -484,7 +484,7 @@ export function TokoPage({ role }: TokoPageProps) {
               {!staffLoading && (
                 <span className={cn(
                   "text-xs px-1.5 py-0.5 rounded-full",
-                  staffTab === "list" ? "bg-indigo-100 text-indigo-600" : "bg-slate-200 text-slate-500"
+                  staffTab === "list" ? "bg-amber-100 text-amber-700" : "bg-slate-200 text-slate-500"
                 )}>
                   {staffList.length}
                 </span>
@@ -600,7 +600,7 @@ export function TokoPage({ role }: TokoPageProps) {
                           variant="outline"
                           onClick={() => handleAssignStaff(u.id)}
                           disabled={assignLoading === u.id}
-                          className="h-7 text-xs gap-1.5 hover:border-indigo-400 hover:text-indigo-600"
+                          className="h-7 text-xs gap-1.5 hover:border-amber-400 hover:text-amber-600"
                         >
                           <UserPlus className="w-3 h-3" />
                           {assignLoading === u.id ? "..." : "Tugaskan"}

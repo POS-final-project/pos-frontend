@@ -3,8 +3,9 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import {
   Search, Plus, Minus, Trash2, ShoppingCart, CreditCard, X,
-  LayoutGrid, LayoutList, Package, Loader2,
+  LayoutGrid, LayoutList, Package, Loader2, ScanBarcode, Printer,
 } from "lucide-react";
+import { ReceiptModal } from "@/components/features/transaksi/receipt-modal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -41,9 +42,11 @@ type Variant = {
   id: string;
   name: string;
   sku: string;
+  barcode?: string | null;
   price: number;
   image_url?: string | null;
   is_active?: boolean;
+  Product?: { id: string; name: string };
 };
 
 type Product = {
@@ -67,13 +70,11 @@ type CartItem = {
   image_url?: string | null;
 };
 
-type PaymentMethod = "cash" | "transfer" | "qris" | "credit";
+type PaymentMethod = "cash" | "qris";
 
 const PAYMENT_LABELS: Record<PaymentMethod, string> = {
   cash: "Tunai",
-  transfer: "Transfer",
   qris: "QRIS",
-  credit: "Kredit",
 };
 
 function formatRp(n: number) {
@@ -120,6 +121,14 @@ export function KasirPage({ role }: KasirPageProps) {
   const [successDialog, setSuccessDialog] = useState(false);
   const [lastTransaction, setLastTransaction] = useState<{ id: string; total: number } | null>(null);
 
+  const [barcodeInput, setBarcodeInput] = useState("");
+  const [barcodeSearching, setBarcodeSearching] = useState(false);
+  const [barcodeErr, setBarcodeErr] = useState("");
+  const [receiptOpen, setReceiptOpen] = useState(false);
+  const barcodeRef = useRef<HTMLInputElement>(null);
+
+  const [stockMap, setStockMap] = useState<Record<string, number>>({});
+
   const searchRef = useRef<HTMLInputElement>(null);
   const customerInputRef = useRef<HTMLInputElement>(null);
 
@@ -156,11 +165,50 @@ export function KasirPage({ role }: KasirPageProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Focus barcode input once loading is done
+  useEffect(() => {
+    if (!loading) barcodeRef.current?.focus();
+  }, [loading]);
+
+  useEffect(() => {
+    if (!selectedShopId) { setStockMap({}); return; }
+
+    type StockItem = { product_variant_id: string; stock: number | string };
+    type StockRes = { data: StockItem[]; meta?: { totalPages: number } };
+
+    const fetchAllStock = async () => {
+      try {
+        const LIMIT = 200;
+        const first = await api.get<StockRes>(`/api/inventory?shopId=${selectedShopId}&page=1&limit=${LIMIT}`);
+        let all: StockItem[] = first.data ?? [];
+        const totalPages = first.meta?.totalPages ?? 1;
+
+        if (totalPages > 1) {
+          const pages = await Promise.all(
+            Array.from({ length: totalPages - 1 }, (_, i) =>
+              api.get<StockRes>(`/api/inventory?shopId=${selectedShopId}&page=${i + 2}&limit=${LIMIT}`)
+                .then((r) => r.data ?? [])
+            )
+          );
+          all = all.concat(pages.flat());
+        }
+
+        const map: Record<string, number> = {};
+        all.forEach((item) => { map[item.product_variant_id] = Number(item.stock); });
+        setStockMap(map);
+      } catch {
+        setStockMap({});
+      }
+    };
+
+    void fetchAllStock();
+  }, [selectedShopId]);
+
   const filteredProducts = products.filter((p) => {
     const matchSearch =
       !search ||
       p.name.toLowerCase().includes(search.toLowerCase()) ||
-      p.sku.toLowerCase().includes(search.toLowerCase());
+      p.sku?.toLowerCase().includes(search.toLowerCase());
     const matchCat = !categoryFilter || p.category?.id === categoryFilter;
     return matchSearch && matchCat;
   });
@@ -215,6 +263,55 @@ export function KasirPage({ role }: KasirPageProps) {
     setCustomerOpen(false);
   }
 
+  function refocusBarcode() {
+    // Use rAF so React has flushed state before we steal focus back
+    requestAnimationFrame(() => barcodeRef.current?.focus());
+  }
+
+  async function handleBarcodeScan(code: string) {
+    const trimmed = code.trim();
+    if (!trimmed) { refocusBarcode(); return; }
+    setBarcodeSearching(true);
+    setBarcodeErr("");
+    try {
+      const res = await api.get<{ data: unknown }>(`/api/products/variants/by-barcode/${encodeURIComponent(trimmed)}`);
+      const variant = (res.data as Variant | null) ?? (res as unknown as { data: Variant }).data;
+      if (!variant?.id) throw new Error("Produk tidak ditemukan");
+
+      const productName = variant.Product?.name ?? "Produk";
+      const stock = selectedShopId ? (stockMap[variant.id] ?? null) : null;
+      if (stock !== null && stock === 0) {
+        setBarcodeErr(`${productName} — stok habis`);
+        setBarcodeInput("");
+        setTimeout(() => setBarcodeErr(""), 3000);
+        refocusBarcode();
+        return;
+      }
+
+      setCart(prev => {
+        const existing = prev.find(c => c.variantId === variant.id);
+        if (existing) return prev.map(c => c.variantId === variant.id ? { ...c, qty: c.qty + 1 } : c);
+        return [...prev, {
+          variantId: variant.id,
+          productName,
+          variantName: variant.name,
+          price: variant.price,
+          qty: 1,
+          image_url: variant.image_url,
+        }];
+      });
+      setBarcodeInput("");
+      refocusBarcode();
+    } catch (err) {
+      setBarcodeErr(err instanceof Error ? err.message : "Barcode tidak ditemukan");
+      setBarcodeInput("");
+      setTimeout(() => setBarcodeErr(""), 3000);
+      refocusBarcode();
+    } finally {
+      setBarcodeSearching(false);
+    }
+  }
+
   const filteredCustomers = customers.filter(
     (c) =>
       !customerSearch ||
@@ -235,7 +332,7 @@ export function KasirPage({ role }: KasirPageProps) {
     setProcessing(true);
     setTxError("");
     try {
-      const res = await api.post<{ success: boolean; data: { id: string; total_amount: number } }>(
+      const res = await api.post<{ success: boolean; data: { id: string; subtotal: number } }>(
         "/api/transactions",
         {
           shop_id: selectedShopId,
@@ -249,7 +346,7 @@ export function KasirPage({ role }: KasirPageProps) {
           })),
         }
       );
-      setLastTransaction({ id: res.data.id, total: res.data.total_amount ?? total });
+      setLastTransaction({ id: res.data.id, total: res.data.subtotal ?? total });
       setSuccessDialog(true);
       setCartOpen(false);
       clearCart();
@@ -271,13 +368,13 @@ export function KasirPage({ role }: KasirPageProps) {
     ) : (
       <>
         {cart.map((item) => (
-          <div key={item.variantId} className="flex items-start gap-2 bg-slate-50 rounded-lg p-2.5 mb-2">
+          <div key={item.variantId} className="flex items-start gap-2 rounded-lg p-2.5 mb-2 border border-slate-100 bg-white hover:border-amber-200 transition-colors">
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-slate-800 truncate">{item.productName}</p>
               {item.variantName !== "Default" && (
-                <p className="text-xs text-slate-500">{item.variantName}</p>
+                <p className="text-xs text-slate-400">{item.variantName}</p>
               )}
-              <p className="text-xs font-semibold text-indigo-700 mt-0.5">{formatRp(item.price)}</p>
+              <p className="text-xs font-bold text-amber-600 mt-0.5">{formatRp(item.price)}</p>
             </div>
             <div className="flex items-center gap-1 flex-shrink-0">
               <Button variant="ghost" size="icon-sm" onClick={() => updateQty(item.variantId, -1)} className="h-6 w-6 text-slate-500">
@@ -343,8 +440,8 @@ export function KasirPage({ role }: KasirPageProps) {
               onBlur={() => setTimeout(() => setCustomerOpen(false), 150)}
               className={cn(
                 "h-7 w-full rounded-md border bg-background pl-6 pr-2 text-xs outline-none transition-colors",
-                "border-input focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400",
-                selectedCustomerId && "border-indigo-300 bg-indigo-50/40"
+                "border-input focus:border-amber-400 focus:ring-1 focus:ring-amber-400",
+                selectedCustomerId && "border-amber-300 bg-amber-50/40"
               )}
             />
             {selectedCustomerId && (
@@ -365,7 +462,7 @@ export function KasirPage({ role }: KasirPageProps) {
                   <div
                     className={cn(
                       "px-3 py-2 text-xs cursor-pointer hover:bg-slate-50 text-slate-500 border-b border-slate-100",
-                      !selectedCustomerId && "bg-indigo-50 text-indigo-700"
+                      !selectedCustomerId && "bg-amber-50 text-amber-700"
                     )}
                     onMouseDown={() => selectCustomer("", "")}
                   >
@@ -381,7 +478,7 @@ export function KasirPage({ role }: KasirPageProps) {
                         key={c.id}
                         className={cn(
                           "px-3 py-2 text-xs cursor-pointer hover:bg-slate-50",
-                          selectedCustomerId === c.id && "bg-indigo-50 text-indigo-700"
+                          selectedCustomerId === c.id && "bg-amber-50 text-amber-700"
                         )}
                         onMouseDown={() => selectCustomer(c.id, c.name)}
                       >
@@ -412,8 +509,8 @@ export function KasirPage({ role }: KasirPageProps) {
             className={cn(
               "px-3 py-1 text-xs rounded-full border transition-colors",
               paymentMethod === k
-                ? "bg-indigo-600 text-white border-indigo-600"
-                : "bg-white text-slate-600 border-slate-200 hover:border-indigo-300"
+                ? "bg-amber-500 text-amber-950 border-amber-500"
+                : "bg-white text-slate-600 border-slate-200 hover:border-amber-300"
             )}
           >
             {PAYMENT_LABELS[k]}
@@ -452,7 +549,7 @@ export function KasirPage({ role }: KasirPageProps) {
         <button
           type="button"
           onClick={() => setShowNote(true)}
-          className="text-xs text-indigo-600 hover:underline text-left"
+          className="text-xs text-amber-600 hover:underline text-left"
         >
           + Tambah catatan
         </button>
@@ -461,7 +558,7 @@ export function KasirPage({ role }: KasirPageProps) {
       {/* Total */}
       <div className="flex items-center justify-between pt-1 border-t border-dashed border-slate-200">
         <span className="font-semibold text-slate-700">Total</span>
-        <span className="font-bold text-xl text-indigo-700">{formatRp(total)}</span>
+        <span className="font-bold text-xl text-amber-700">{formatRp(total)}</span>
       </div>
 
       {txError && (
@@ -490,6 +587,42 @@ export function KasirPage({ role }: KasirPageProps) {
 
         {/* Left — Product Panel */}
         <div className="flex flex-col flex-1 min-w-0 gap-3 lg:min-h-0">
+
+          {/* Barcode Scanner Input — always active, auto-focused */}
+          <div className="space-y-1">
+            <div className="relative">
+              <ScanBarcode className={cn(
+                "absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 transition-colors",
+                barcodeErr ? "text-red-400" : "text-amber-500",
+              )} />
+              <input
+                ref={barcodeRef}
+                type="text"
+                autoFocus
+                placeholder="Siap scan barcode…"
+                value={barcodeInput}
+                onChange={(e) => { setBarcodeInput(e.target.value); setBarcodeErr(""); }}
+                onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleBarcodeScan(barcodeInput); } }}
+                disabled={barcodeSearching}
+                className={cn(
+                  "h-10 w-full rounded-md border bg-background pl-9 pr-8 text-sm outline-none transition-colors",
+                  barcodeErr
+                    ? "border-red-300 ring-1 ring-red-200"
+                    : "border-amber-300 ring-1 ring-amber-100 focus:border-amber-500 focus:ring-amber-200",
+                )}
+              />
+              {barcodeSearching
+                ? <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-amber-500 animate-spin" />
+                : <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-semibold text-amber-400 tracking-wide select-none">AKTIF</span>
+              }
+            </div>
+            {barcodeErr && (
+              <p className="text-xs text-red-600 flex items-center gap-1 pl-1">
+                <X className="w-3 h-3 flex-shrink-0" />
+                {barcodeErr}
+              </p>
+            )}
+          </div>
 
           {/* Search + Category + View toggle */}
           <div className="flex gap-2">
@@ -553,73 +686,135 @@ export function KasirPage({ role }: KasirPageProps) {
             ) : productView === "card" ? (
               <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-3">
                 {filteredProducts.map((product) =>
-                  (product.variants ?? []).map((variant) => (
-                    <button
-                      key={variant.id}
-                      onClick={() => addToCart(product, variant)}
-                      className="flex flex-col text-left bg-white border border-slate-200 rounded-xl overflow-hidden hover:border-indigo-400 hover:shadow-sm transition-all active:scale-[0.98]"
-                    >
-                      <div className="relative w-full aspect-[4/3] bg-slate-100 flex items-center justify-center">
-                        <Package className="w-8 h-8 text-slate-300 absolute" />
-                        {variant.image_url && (
-                          <img
-                            src={`/backend${variant.image_url}`}
-                            alt={variant.name}
-                            className="absolute inset-0 w-full h-full object-cover"
-                            onError={(e) => { e.currentTarget.style.display = "none"; }}
-                          />
+                  (product.variants ?? []).map((variant) => {
+                    const stock = selectedShopId ? (stockMap[variant.id] ?? null) : null;
+                    const outOfStock = stock !== null && stock === 0;
+                    const lowStock = stock !== null && stock > 0 && stock <= 5;
+                    return (
+                      <button
+                        key={variant.id}
+                        onClick={() => !outOfStock && addToCart(product, variant)}
+                        disabled={outOfStock}
+                        className={cn(
+                          "flex flex-col text-left bg-white border border-slate-200 rounded-xl overflow-hidden transition-all",
+                          outOfStock
+                            ? "opacity-60 cursor-not-allowed"
+                            : "hover:border-amber-400 hover:shadow-sm active:scale-[0.98]"
                         )}
-                      </div>
-                      <div className="p-2.5 flex flex-col gap-0.5">
-                        <div className="text-xs text-slate-400 font-mono truncate">{variant.sku}</div>
-                        <div className="font-medium text-slate-800 text-sm leading-tight line-clamp-2">
-                          {product.name}
+                      >
+                        <div className="relative w-full aspect-[4/3] bg-slate-100 flex items-center justify-center">
+                          <Package className="w-8 h-8 text-slate-300 absolute" />
+                          {variant.image_url && (
+                            <img
+                              src={`/backend${variant.image_url}`}
+                              alt={variant.name}
+                              className="absolute inset-0 w-full h-full object-cover"
+                              onError={(e) => { e.currentTarget.style.display = "none"; }}
+                            />
+                          )}
+                          {outOfStock && (
+                            <div className="absolute inset-0 bg-slate-900/40 flex items-center justify-center">
+                              <span className="text-white text-xs font-bold tracking-wide bg-slate-800/70 px-2 py-0.5 rounded">
+                                HABIS
+                              </span>
+                            </div>
+                          )}
                         </div>
-                        {variant.name !== "Default" && (
-                          <Badge variant="secondary" className="text-xs px-1.5 py-0 w-fit">
-                            {variant.name}
-                          </Badge>
-                        )}
-                        <div className="mt-1 font-semibold text-indigo-700 text-sm">
-                          {formatRp(variant.price)}
+                        <div className="p-2.5 flex flex-col gap-0.5">
+                          <div className="text-xs text-slate-400 font-mono truncate">{variant.sku}</div>
+                          <div className="font-medium text-slate-800 text-sm leading-tight line-clamp-2">
+                            {product.name}
+                          </div>
+                          {variant.name !== "Default" && (
+                            <Badge variant="secondary" className="text-xs px-1.5 py-0 w-fit">
+                              {variant.name}
+                            </Badge>
+                          )}
+                          <div className="mt-1.5 flex items-center justify-between gap-1">
+                            <div className="font-semibold text-amber-700 text-sm">
+                              {formatRp(variant.price)}
+                            </div>
+                            {stock !== null && (
+                              <span className={cn(
+                                "text-[10px] font-semibold px-1.5 py-0.5 rounded-full border shrink-0",
+                                outOfStock
+                                  ? "bg-red-50 text-red-600 border-red-200"
+                                  : lowStock
+                                  ? "bg-amber-50 text-amber-700 border-amber-200"
+                                  : "bg-slate-50 text-slate-500 border-slate-200"
+                              )}>
+                                {outOfStock ? "Habis" : stock}
+                              </span>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    </button>
-                  ))
+                      </button>
+                    );
+                  })
                 )}
               </div>
             ) : (
               <div className="flex flex-col gap-2">
                 {filteredProducts.map((product) =>
-                  (product.variants ?? []).map((variant) => (
-                    <button
-                      key={variant.id}
-                      onClick={() => addToCart(product, variant)}
-                      className="flex items-center gap-3 text-left bg-white border border-slate-200 rounded-xl p-2.5 hover:border-indigo-400 hover:shadow-sm transition-all active:scale-[0.98]"
-                    >
-                      <div className="relative w-12 h-12 rounded-lg bg-slate-100 flex items-center justify-center flex-shrink-0 overflow-hidden">
-                        <Package className="w-5 h-5 text-slate-300 absolute" />
-                        {variant.image_url && (
-                          <img
-                            src={`/backend${variant.image_url}`}
-                            alt={variant.name}
-                            className="absolute inset-0 w-full h-full object-cover"
-                            onError={(e) => { e.currentTarget.style.display = "none"; }}
-                          />
+                  (product.variants ?? []).map((variant) => {
+                    const stock = selectedShopId ? (stockMap[variant.id] ?? null) : null;
+                    const outOfStock = stock !== null && stock === 0;
+                    const lowStock = stock !== null && stock > 0 && stock <= 5;
+                    return (
+                      <button
+                        key={variant.id}
+                        onClick={() => !outOfStock && addToCart(product, variant)}
+                        disabled={outOfStock}
+                        className={cn(
+                          "flex items-center gap-3 text-left bg-white border border-slate-200 rounded-xl p-2.5 transition-all",
+                          outOfStock
+                            ? "opacity-60 cursor-not-allowed"
+                            : "hover:border-amber-400 hover:shadow-sm active:scale-[0.98]"
                         )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="text-xs text-slate-400 font-mono">{variant.sku}</div>
-                        <div className="font-medium text-slate-800 text-sm leading-tight">{product.name}</div>
-                        {variant.name !== "Default" && (
-                          <Badge variant="secondary" className="text-xs px-1.5 py-0">{variant.name}</Badge>
-                        )}
-                      </div>
-                      <div className="font-semibold text-indigo-700 text-sm flex-shrink-0">
-                        {formatRp(variant.price)}
-                      </div>
-                    </button>
-                  ))
+                      >
+                        <div className="relative w-12 h-12 rounded-lg bg-slate-100 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                          <Package className="w-5 h-5 text-slate-300 absolute" />
+                          {variant.image_url && (
+                            <img
+                              src={`/backend${variant.image_url}`}
+                              alt={variant.name}
+                              className="absolute inset-0 w-full h-full object-cover"
+                              onError={(e) => { e.currentTarget.style.display = "none"; }}
+                            />
+                          )}
+                          {outOfStock && (
+                            <div className="absolute inset-0 bg-slate-900/50 flex items-center justify-center rounded-lg">
+                              <span className="text-white text-[9px] font-bold">HABIS</span>
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="text-xs text-slate-400 font-mono">{variant.sku}</div>
+                          <div className="font-medium text-slate-800 text-sm leading-tight">{product.name}</div>
+                          {variant.name !== "Default" && (
+                            <Badge variant="secondary" className="text-xs px-1.5 py-0">{variant.name}</Badge>
+                          )}
+                        </div>
+                        <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                          <div className="font-semibold text-amber-700 text-sm">
+                            {formatRp(variant.price)}
+                          </div>
+                          {stock !== null && (
+                            <span className={cn(
+                              "text-[10px] font-semibold px-1.5 py-0.5 rounded-full border",
+                              outOfStock
+                                ? "bg-red-50 text-red-600 border-red-200"
+                                : lowStock
+                                ? "bg-amber-50 text-amber-700 border-amber-200"
+                                : "bg-slate-50 text-slate-500 border-slate-200"
+                            )}>
+                              {outOfStock ? "Habis" : `Stok ${stock}`}
+                            </span>
+                          )}
+                        </div>
+                      </button>
+                    );
+                  })
                 )}
               </div>
             )}
@@ -666,7 +861,7 @@ export function KasirPage({ role }: KasirPageProps) {
           <>
             <div className="flex-1 min-w-0">
               <p className="text-xs text-slate-500">{totalQty} item</p>
-              <p className="font-bold text-indigo-700 text-sm">{formatRp(total)}</p>
+              <p className="font-bold text-amber-700 text-sm">{formatRp(total)}</p>
             </div>
             <Button onClick={() => setCartOpen(true)} size="sm" className="gap-2 flex-shrink-0">
               <ShoppingCart className="w-4 h-4" />
@@ -745,32 +940,55 @@ export function KasirPage({ role }: KasirPageProps) {
       {/* Processing overlay — prevents double-click during transaction */}
       {processing && (
         <div className="fixed inset-0 z-[9998] bg-slate-900/40 backdrop-blur-[2px] flex items-center justify-center">
-          <div className="bg-white rounded-2xl shadow-xl px-8 py-6 flex flex-col items-center gap-3">
-            <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
+          <div className="bg-white rounded-2xl shadow-md px-8 py-6 flex flex-col items-center gap-3">
+            <Loader2 className="w-8 h-8 text-amber-500 animate-spin" />
             <p className="text-sm font-medium text-slate-700">Memproses transaksi...</p>
             <p className="text-xs text-slate-400">Mohon tunggu sebentar</p>
           </div>
         </div>
       )}
 
+      {/* Receipt Modal */}
+      <ReceiptModal
+        open={receiptOpen}
+        onClose={() => setReceiptOpen(false)}
+        transactionId={lastTransaction?.id ?? null}
+        shopId={selectedShopId || undefined}
+      />
+
       {/* Success Dialog */}
       <Dialog open={successDialog} onOpenChange={setSuccessDialog}>
         <DialogContent className="sm:max-w-sm">
-          <DialogHeader>
-            <DialogTitle>Transaksi Berhasil</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-3 text-sm text-slate-600">
-            <div className="bg-green-50 border border-green-200 rounded-lg px-4 py-3 text-center">
-              <p className="text-green-700 font-semibold text-lg">{formatRp(lastTransaction?.total ?? 0)}</p>
-              <p className="text-green-600 text-xs mt-0.5">Transaksi selesai</p>
+          <div className="flex flex-col items-center text-center pt-2 pb-1 gap-4">
+            {/* Checkmark */}
+            <div className="w-16 h-16 rounded-2xl bg-green-50 border border-green-200 flex items-center justify-center shadow-sm">
+              <svg className="w-8 h-8 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+              </svg>
             </div>
-            <p className="text-xs text-slate-400 text-center">ID: {lastTransaction?.id}</p>
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-widest text-green-600 mb-1">Transaksi Berhasil</p>
+              <p className="text-3xl font-extrabold tracking-tight" style={{ color: "oklch(0.13 0.025 260)" }}>
+                {formatRp(lastTransaction?.total ?? 0)}
+              </p>
+            </div>
+            <p className="text-[11px] font-mono text-slate-400 bg-slate-50 px-3 py-1 rounded-full border border-slate-100">
+              {lastTransaction?.id}
+            </p>
+            <div className="flex gap-2 w-full mt-1">
+              <Button
+                variant="outline"
+                className="flex-1 gap-2"
+                onClick={() => { setSuccessDialog(false); setReceiptOpen(true); }}
+              >
+                <Printer className="w-4 h-4" />
+                Cetak Receipt
+              </Button>
+              <Button onClick={() => setSuccessDialog(false)} className="flex-1">
+                Transaksi Baru
+              </Button>
+            </div>
           </div>
-          <DialogFooter>
-            <Button onClick={() => setSuccessDialog(false)} className="w-full">
-              Transaksi Baru
-            </Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
     </>
