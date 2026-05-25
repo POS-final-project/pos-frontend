@@ -430,7 +430,7 @@ export function ProdukPage({ canEdit = true }: ProdukPageProps) {
             className="pl-9"
           />
         </div>
-        <Select value={catFilter || "__all"} onValueChange={(v) => setCatFilter(v === "__all" ? "" : v)}>
+        <Select value={catFilter || "__all"} onValueChange={(v) => setCatFilter(v === "__all" ? "" : (v ?? ""))}>
           <SelectTrigger className="w-44">
             <span className="text-sm">
               {catFilter ? (categories.find((c) => c.id === catFilter)?.name ?? "Semua Kategori") : "Semua Kategori"}

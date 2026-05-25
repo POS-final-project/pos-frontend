@@ -601,7 +601,7 @@ export function TransferPage({ role }: TransferPageProps) {
 
       {/* Filter bar */}
       <div className="flex items-center gap-3">
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
+        <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v ?? "")}>
           <SelectTrigger className="w-44">
             <span className="text-sm">
               {statusFilter ? STATUS_LABEL[statusFilter as TransferStatus] : "Semua Status"}
