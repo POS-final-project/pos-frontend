@@ -22,6 +22,7 @@ import { TableSkeleton } from "@/components/ui/skeleton";
 import { api } from "@/lib/api";
 import { getUser } from "@/lib/auth";
 import { PageHeader } from "@/components/layout/page-header";
+import { DatePicker } from "@/components/ui/date-picker";
 import { cn } from "@/lib/utils";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -315,24 +316,22 @@ export function AuditLogPage({ role }: AuditLogPageProps) {
           {/* Date from */}
           <div className="space-y-1.5">
             <Label className="text-xs text-slate-500">Dari Tanggal</Label>
-            <Input
-              type="date"
+            <DatePicker
               value={filterDateFrom}
-              onChange={(e) => setFilterDateFrom(e.target.value)}
-              onBlur={() => applyFilters()}
-              className="h-9 text-sm"
+              onChange={setFilterDateFrom}
+              onBlur={applyFilters}
+              placeholder="Dari tanggal"
             />
           </div>
 
           {/* Date to */}
           <div className="space-y-1.5">
             <Label className="text-xs text-slate-500">Sampai Tanggal</Label>
-            <Input
-              type="date"
+            <DatePicker
               value={filterDateTo}
-              onChange={(e) => setFilterDateTo(e.target.value)}
-              onBlur={() => applyFilters()}
-              className="h-9 text-sm"
+              onChange={setFilterDateTo}
+              onBlur={applyFilters}
+              placeholder="Sampai tanggal"
             />
           </div>
         </div>

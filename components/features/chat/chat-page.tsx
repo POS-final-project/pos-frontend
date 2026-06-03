@@ -7,6 +7,7 @@ import { ChatWindow } from "./chat-window";
 import { NewSessionModal } from "./new-session-modal";
 import { aiChatApi, type AiSession, type QueryResult, type AiMessage } from "@/lib/aiChat";
 import { api } from "@/lib/api";
+import { getUser } from "@/lib/auth";
 
 type Shop = { id: string; name: string };
 
@@ -106,6 +107,10 @@ function ErrorBanner({ message, onDismiss, onRetry }: ErrorBannerProps) {
 }
 
 export function ChatPage() {
+  const currentUser = getUser();
+  const isAdmin = currentUser?.role === "admin";
+  const adminShopId = isAdmin ? (currentUser?.shopId ?? null) : null;
+
   const [sessions, setSessions] = useState<AiSession[]>([]);
   const [activeSession, setActiveSession] = useState<AiSession | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -351,6 +356,8 @@ export function ChatPage() {
         open={showModal}
         onConfirm={createSession}
         onClose={() => setShowModal(false)}
+        allowGlobal={!isAdmin}
+        forcedShopId={adminShopId}
       />
     </div>
   );

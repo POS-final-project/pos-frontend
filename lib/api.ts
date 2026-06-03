@@ -1,10 +1,18 @@
-import { getCookie } from "./cookies";
+import { getCookie, removeCookie } from "./cookies";
 
-// Requests go to /backend/* which next.config rewrites to http://localhost:5000/*
 const BASE_URL = "/backend";
 
 function getToken(): string | null {
   return getCookie("pos_access_token");
+}
+
+function handleUnauthorized() {
+  removeCookie("pos_access_token");
+  removeCookie("pos_refresh_token");
+  removeCookie("pos_user");
+  if (typeof window !== "undefined") {
+    window.location.href = "/login";
+  }
 }
 
 function buildBody(body: unknown): BodyInit | undefined {
@@ -44,6 +52,9 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   }
 
   if (!res.ok) {
+    if (res.status === 401) {
+      handleUnauthorized();
+    }
     throw new Error(
       (typeof data === "object" && data !== null
         ? (data as { message?: string }).message

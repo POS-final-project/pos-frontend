@@ -83,7 +83,7 @@ export function RefundKasirPage() {
     setSearchLoading(true);
     setSearchError("");
     try {
-      const res = await api.get<{ success: boolean; data: Transaction }>(`/api/transactions/${id}`);
+      const res = await api.get<{ success: boolean; data: Transaction }>(`/api/transactions/invoice/${encodeURIComponent(id)}`);
       const tx = res.data;
       if (!tx || tx.status !== "selesai") {
         setSearchError("Hanya transaksi yang sudah selesai yang dapat direfund");
@@ -115,7 +115,7 @@ export function RefundKasirPage() {
     setSubmitError("");
     try {
       await api.post("/api/refunds", {
-        transaction_id: foundTx.id,
+        invoice_no: foundTx.invoice_no,
         reason: reason.trim() || undefined,
         items,
       });
@@ -160,19 +160,19 @@ export function RefundKasirPage() {
             </div>
             <div>
               <p className="font-medium text-slate-800 text-sm">Cari Transaksi</p>
-              <p className="text-xs text-slate-400">Masukkan ID transaksi yang ingin direfund</p>
+              <p className="text-xs text-slate-400">Masukkan nomor invoice yang ingin direfund</p>
             </div>
           </div>
 
           <form onSubmit={handleSearch} className="space-y-4">
             <div className="space-y-1.5">
               <Label htmlFor="tx-id">
-                ID Transaksi <span className="text-red-500">*</span>
+                Nomor Invoice <span className="text-red-500">*</span>
               </Label>
               <div className="flex gap-2">
                 <Input
                   id="tx-id"
-                  placeholder="Masukkan ID transaksi (UUID)..."
+                  placeholder="Ketik nomor invoice dari struk"
                   value={txIdInput}
                   onChange={(e) => { setTxIdInput(e.target.value); setSearchError(""); }}
                   className="font-mono text-sm"
@@ -293,7 +293,7 @@ export function RefundKasirPage() {
             </Label>
             <Input
               id="reason"
-              placeholder="cth. Barang cacat, salah ukuran..."
+              placeholder="Jelaskan alasan pengembalian barang"
               value={reason}
               onChange={(e) => setReason(e.target.value)}
             />

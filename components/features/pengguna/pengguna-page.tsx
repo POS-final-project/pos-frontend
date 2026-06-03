@@ -494,7 +494,7 @@ export function PenggunaPage() {
               <Label htmlFor="r-name">Nama Lengkap</Label>
               <Input
                 id="r-name"
-                placeholder="cth. Budi Santoso"
+                placeholder="Nama lengkap pengguna"
                 value={regName}
                 onChange={(e) => setRegName(e.target.value)}
                 required
@@ -507,7 +507,7 @@ export function PenggunaPage() {
               <Input
                 id="r-email"
                 type="email"
-                placeholder="cth. budi@toko.com"
+                placeholder="Alamat email untuk masuk"
                 value={regEmail}
                 onChange={(e) => setRegEmail(e.target.value)}
                 required
@@ -520,7 +520,7 @@ export function PenggunaPage() {
                 <Input
                   id="r-pwd"
                   type={regShowPwd ? "text" : "password"}
-                  placeholder="Min. 8 karakter"
+                  placeholder="Buat password minimal 8 karakter"
                   value={regPassword}
                   onChange={(e) => setRegPassword(e.target.value)}
                   required
@@ -617,7 +617,7 @@ export function PenggunaPage() {
               <Label htmlFor="u-phone">Nomor Telepon</Label>
               <Input
                 id="u-phone"
-                placeholder="cth. 08123456789"
+                placeholder="Nomor telepon pengguna"
                 value={formPhone}
                 onChange={(e) => setFormPhone(e.target.value)}
               />

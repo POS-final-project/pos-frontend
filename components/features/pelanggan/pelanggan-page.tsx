@@ -315,7 +315,7 @@ export function PelangganPage() {
               </Label>
               <Input
                 id="c-name"
-                placeholder="cth. Budi Santoso"
+                placeholder="Nama lengkap pelanggan"
                 value={formName}
                 onChange={(e) => { setFormName(e.target.value); setFormError(""); }}
                 autoFocus
@@ -328,7 +328,7 @@ export function PelangganPage() {
                 </Label>
                 <Input
                   id="c-phone"
-                  placeholder="08123456789"
+                  placeholder="Nomor telepon aktif"
                   value={formPhone}
                   onChange={(e) => setFormPhone(e.target.value)}
                 />
@@ -340,7 +340,7 @@ export function PelangganPage() {
                 <Input
                   id="c-email"
                   type="email"
-                  placeholder="email@contoh.com"
+                  placeholder="Alamat email pelanggan"
                   value={formEmail}
                   onChange={(e) => setFormEmail(e.target.value)}
                 />
@@ -352,7 +352,7 @@ export function PelangganPage() {
               </Label>
               <Input
                 id="c-addr"
-                placeholder="cth. Jl. Sudirman No. 10"
+                placeholder="Alamat lengkap pelanggan"
                 value={formAddress}
                 onChange={(e) => setFormAddress(e.target.value)}
               />

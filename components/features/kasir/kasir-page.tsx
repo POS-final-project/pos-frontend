@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import {
   Search, Plus, Minus, Trash2, ShoppingCart, CreditCard, X,
   LayoutGrid, LayoutList, Package, Loader2, ScanBarcode, Printer,
@@ -128,6 +128,7 @@ export function KasirPage({ role }: KasirPageProps) {
   const barcodeRef = useRef<HTMLInputElement>(null);
 
   const [stockMap, setStockMap] = useState<Record<string, number>>({});
+  const [stockMapReady, setStockMapReady] = useState(false);
 
   const searchRef = useRef<HTMLInputElement>(null);
   const customerInputRef = useRef<HTMLInputElement>(null);
@@ -171,11 +172,12 @@ export function KasirPage({ role }: KasirPageProps) {
   }, [loading]);
 
   useEffect(() => {
-    if (!selectedShopId) { setStockMap({}); return; }
+    if (!selectedShopId) { setStockMap({}); setStockMapReady(false); return; }
 
     type StockItem = { product_variant_id: string; stock: number | string };
     type StockRes = { data: StockItem[]; meta?: { totalPages: number } };
 
+    setStockMapReady(false);
     const fetchAllStock = async () => {
       try {
         const LIMIT = 200;
@@ -198,6 +200,8 @@ export function KasirPage({ role }: KasirPageProps) {
         setStockMap(map);
       } catch {
         setStockMap({});
+      } finally {
+        setStockMapReady(true);
       }
     };
 
@@ -212,6 +216,27 @@ export function KasirPage({ role }: KasirPageProps) {
     const matchCat = !categoryFilter || p.category?.id === categoryFilter;
     return matchSearch && matchCat;
   });
+
+  const sortedVariantList = useMemo(() => {
+    const flat: { product: Product; variant: Variant }[] = [];
+    for (const product of filteredProducts) {
+      for (const variant of product.variants ?? []) {
+        flat.push({ product, variant });
+      }
+    }
+    if (!selectedShopId || !stockMapReady) return flat;
+    return flat.sort((a, b) => {
+      const score = (id: string) => {
+        if (!(id in stockMap)) return 3;
+        const s = stockMap[id];
+        if (s === 0) return 2;
+        if (s <= 5) return 1;
+        return 0;
+      };
+      return score(a.variant.id) - score(b.variant.id);
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filteredProducts, stockMap, stockMapReady, selectedShopId]);
 
   function addToCart(product: Product, variant: Variant) {
     setCart((prev) => {
@@ -280,6 +305,14 @@ export function KasirPage({ role }: KasirPageProps) {
 
       const productName = variant.Product?.name ?? "Produk";
       const stock = selectedShopId ? (stockMap[variant.id] ?? null) : null;
+      const notInShopBarcode = selectedShopId && stockMapReady && !(variant.id in stockMap);
+      if (notInShopBarcode) {
+        setBarcodeErr(`${productName} — tidak tersedia di toko ini`);
+        setBarcodeInput("");
+        setTimeout(() => setBarcodeErr(""), 3000);
+        refocusBarcode();
+        return;
+      }
       if (stock !== null && stock === 0) {
         setBarcodeErr(`${productName} — stok habis`);
         setBarcodeInput("");
@@ -523,7 +556,7 @@ export function KasirPage({ role }: KasirPageProps) {
         <div className="flex items-center gap-2">
           <Input
             type="number"
-            placeholder="Uang diterima..."
+            placeholder="Nominal uang yang diterima"
             value={cashInput}
             onChange={(e) => setCashInput(e.target.value)}
             className="h-8 text-sm flex-1 min-w-0"
@@ -540,7 +573,7 @@ export function KasirPage({ role }: KasirPageProps) {
       {/* Collapsible note */}
       {showNote ? (
         <Input
-          placeholder="Catatan transaksi..."
+          placeholder="Tuliskan catatan untuk transaksi ini"
           value={note}
           onChange={(e) => setNote(e.target.value)}
           className="h-8 text-sm"
@@ -681,15 +714,15 @@ export function KasirPage({ role }: KasirPageProps) {
           <div className="flex-1 overflow-y-auto pb-20 lg:pb-2">
             {loading ? (
               <div className="flex items-center justify-center h-40 text-slate-400 text-sm">Memuat...</div>
-            ) : filteredProducts.length === 0 ? (
+            ) : sortedVariantList.length === 0 ? (
               <div className="flex items-center justify-center h-40 text-slate-400 text-sm">Tidak ada produk</div>
             ) : productView === "card" ? (
               <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-3">
-                {filteredProducts.map((product) =>
-                  (product.variants ?? []).map((variant) => {
+                {sortedVariantList.map(({ product, variant }) => {
                     const stock = selectedShopId ? (stockMap[variant.id] ?? null) : null;
-                    const outOfStock = stock !== null && stock === 0;
-                    const lowStock = stock !== null && stock > 0 && stock <= 5;
+                    const notInShop = selectedShopId && stockMapReady && !(variant.id in stockMap);
+                    const outOfStock = notInShop || (stock !== null && stock === 0);
+                    const lowStock = !notInShop && stock !== null && stock > 0 && stock <= 5;
                     return (
                       <button
                         key={variant.id}
@@ -715,7 +748,7 @@ export function KasirPage({ role }: KasirPageProps) {
                           {outOfStock && (
                             <div className="absolute inset-0 bg-slate-900/40 flex items-center justify-center">
                               <span className="text-white text-xs font-bold tracking-wide bg-slate-800/70 px-2 py-0.5 rounded">
-                                HABIS
+                                {notInShop ? "TDK TERSEDIA" : "HABIS"}
                               </span>
                             </div>
                           )}
@@ -734,7 +767,7 @@ export function KasirPage({ role }: KasirPageProps) {
                             <div className="font-semibold text-amber-700 text-sm">
                               {formatRp(variant.price)}
                             </div>
-                            {stock !== null && (
+                            {(stock !== null || notInShop) && (
                               <span className={cn(
                                 "text-[10px] font-semibold px-1.5 py-0.5 rounded-full border shrink-0",
                                 outOfStock
@@ -743,23 +776,22 @@ export function KasirPage({ role }: KasirPageProps) {
                                   ? "bg-amber-50 text-amber-700 border-amber-200"
                                   : "bg-slate-50 text-slate-500 border-slate-200"
                               )}>
-                                {outOfStock ? "Habis" : stock}
+                                {notInShop ? "N/A" : outOfStock ? "Habis" : stock}
                               </span>
                             )}
                           </div>
                         </div>
                       </button>
                     );
-                  })
-                )}
+                  })}
               </div>
             ) : (
               <div className="flex flex-col gap-2">
-                {filteredProducts.map((product) =>
-                  (product.variants ?? []).map((variant) => {
+                {sortedVariantList.map(({ product, variant }) => {
                     const stock = selectedShopId ? (stockMap[variant.id] ?? null) : null;
-                    const outOfStock = stock !== null && stock === 0;
-                    const lowStock = stock !== null && stock > 0 && stock <= 5;
+                    const notInShop = selectedShopId && stockMapReady && !(variant.id in stockMap);
+                    const outOfStock = notInShop || (stock !== null && stock === 0);
+                    const lowStock = !notInShop && stock !== null && stock > 0 && stock <= 5;
                     return (
                       <button
                         key={variant.id}
@@ -784,7 +816,7 @@ export function KasirPage({ role }: KasirPageProps) {
                           )}
                           {outOfStock && (
                             <div className="absolute inset-0 bg-slate-900/50 flex items-center justify-center rounded-lg">
-                              <span className="text-white text-[9px] font-bold">HABIS</span>
+                              <span className="text-white text-[9px] font-bold">{notInShop ? "N/A" : "HABIS"}</span>
                             </div>
                           )}
                         </div>
@@ -799,7 +831,7 @@ export function KasirPage({ role }: KasirPageProps) {
                           <div className="font-semibold text-amber-700 text-sm">
                             {formatRp(variant.price)}
                           </div>
-                          {stock !== null && (
+                          {(stock !== null || notInShop) && (
                             <span className={cn(
                               "text-[10px] font-semibold px-1.5 py-0.5 rounded-full border",
                               outOfStock
@@ -808,14 +840,13 @@ export function KasirPage({ role }: KasirPageProps) {
                                 ? "bg-amber-50 text-amber-700 border-amber-200"
                                 : "bg-slate-50 text-slate-500 border-slate-200"
                             )}>
-                              {outOfStock ? "Habis" : `Stok ${stock}`}
+                              {notInShop ? "Tidak tersedia" : outOfStock ? "Habis" : `Stok ${stock}`}
                             </span>
                           )}
                         </div>
                       </button>
                     );
-                  })
-                )}
+                  })}
               </div>
             )}
           </div>

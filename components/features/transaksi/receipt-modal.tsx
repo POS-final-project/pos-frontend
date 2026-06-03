@@ -155,22 +155,12 @@ export function ReceiptModal({ open, onClose, transactionId, shopId }: ReceiptMo
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-sm max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-sm flex flex-col max-h-[90vh]">
         <DialogHeader>
-          <div className="flex items-center justify-between">
-            <DialogTitle className="text-base">Receipt</DialogTitle>
-            <Button
-              size="sm"
-              onClick={handlePrint}
-              disabled={!receipt}
-              className="gap-1.5 h-8 text-xs"
-            >
-              <Printer className="w-3.5 h-3.5" />
-              Cetak
-            </Button>
-          </div>
+          <DialogTitle className="text-base">Receipt</DialogTitle>
         </DialogHeader>
 
+        <div className="flex-1 overflow-y-auto">
         {loading ? (
           <div className="py-10 text-center text-slate-400 text-sm">Memuat receipt…</div>
         ) : error ? (
@@ -274,6 +264,18 @@ export function ReceiptModal({ open, onClose, transactionId, shopId }: ReceiptMo
             </p>
           </div>
         ) : null}
+        </div>
+
+        <div className="pt-3 border-t border-slate-100 flex-shrink-0">
+          <Button
+            onClick={handlePrint}
+            disabled={!receipt}
+            className="w-full gap-2"
+          >
+            <Printer className="w-4 h-4" />
+            Cetak Receipt
+          </Button>
+        </div>
       </DialogContent>
     </Dialog>
   );

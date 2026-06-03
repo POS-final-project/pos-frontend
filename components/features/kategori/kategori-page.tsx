@@ -258,7 +258,7 @@ export function KategoriPage({ canEdit = true }: KategoriPageProps) {
               </Label>
               <Input
                 id="cat-name"
-                placeholder="cth. Minuman"
+                placeholder="Nama kategori produk"
                 value={formName}
                 onChange={(e) => { setFormName(e.target.value); setFormError(""); }}
                 autoFocus

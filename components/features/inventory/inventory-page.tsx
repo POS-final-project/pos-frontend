@@ -815,7 +815,7 @@ export function InventoryPage({ role }: InventoryPageProps) {
                 id="rs-qty"
                 type="number"
                 min="1"
-                placeholder="cth. 50"
+                placeholder="Jumlah unit yang masuk"
                 value={restockQty}
                 onChange={(e) => setRestockQty(e.target.value)}
                 required
@@ -836,7 +836,7 @@ export function InventoryPage({ role }: InventoryPageProps) {
                 id="rs-cost"
                 type="number"
                 min="0"
-                placeholder="cth. 2500"
+                placeholder="Harga beli per unit"
                 value={restockCost}
                 onChange={(e) => setRestockCost(e.target.value)}
                 required
@@ -848,7 +848,7 @@ export function InventoryPage({ role }: InventoryPageProps) {
               </Label>
               <Input
                 id="rs-note"
-                placeholder="cth. Restock dari supplier"
+                placeholder="Keterangan restock ini"
                 value={restockNote}
                 onChange={(e) => setRestockNote(e.target.value)}
               />
@@ -893,7 +893,7 @@ export function InventoryPage({ role }: InventoryPageProps) {
                 type="number"
                 min="1"
                 max={Number(adjTarget?.stock ?? 9999)}
-                placeholder="cth. 5"
+                placeholder="Jumlah unit yang dikurangi"
                 value={adjQty}
                 onChange={(e) => setAdjQty(e.target.value)}
                 required
@@ -916,7 +916,7 @@ export function InventoryPage({ role }: InventoryPageProps) {
               <Label htmlFor="adj-note">Alasan / Catatan</Label>
               <Input
                 id="adj-note"
-                placeholder="cth. Barang rusak/expired"
+                placeholder="Jelaskan alasan pengurangan stok"
                 value={adjNote}
                 onChange={(e) => setAdjNote(e.target.value)}
               />
@@ -953,7 +953,7 @@ export function InventoryPage({ role }: InventoryPageProps) {
                 id="thresh-val"
                 type="number"
                 min="0"
-                placeholder="cth. 10"
+                placeholder="Batas stok minimum"
                 value={threshValue}
                 onChange={(e) => setThreshValue(e.target.value)}
                 required
