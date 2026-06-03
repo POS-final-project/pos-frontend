@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { Send, Bot } from "lucide-react";
+import ReactMarkdown from "react-markdown";
 import { cn } from "@/lib/utils";
 import type { QueryResult } from "@/lib/aiChat";
 
@@ -57,7 +58,7 @@ export function ChatWindow({ messages, isLoading, onSend }: ChatWindowProps) {
   return (
     <div className="flex flex-col h-full bg-white">
       {/* ── Message list ─────────────────────────────────────────── */}
-      <div className="flex-1 overflow-y-auto px-5 py-5 space-y-3">
+      <div className="flex-1 overflow-y-auto px-3 sm:px-5 py-4 sm:py-5 space-y-3">
         {visible.length === 0 && !isLoading ? (
           <div className="flex flex-col items-center justify-center h-full text-center py-12">
             <div className="w-14 h-14 rounded-2xl bg-amber-50 border border-amber-200/60 flex items-center justify-center mb-4">
@@ -91,13 +92,47 @@ export function ChatWindow({ messages, isLoading, onSend }: ChatWindowProps) {
               >
                 <div
                   className={cn(
-                    "max-w-[76%] px-4 py-2.5 text-sm leading-relaxed whitespace-pre-wrap break-words",
+                    "max-w-[88%] sm:max-w-[76%] px-3 sm:px-4 py-2.5 text-sm leading-relaxed break-words",
                     msg.role === "user"
-                      ? "bg-amber-500 text-amber-950 rounded-2xl rounded-tr-sm"
+                      ? "bg-amber-500 text-amber-950 rounded-2xl rounded-tr-sm whitespace-pre-wrap"
                       : "bg-white border border-slate-200 text-slate-800 rounded-2xl rounded-tl-sm",
                   )}
                 >
-                  {msg.content}
+                  {msg.role === "user" ? (
+                    msg.content
+                  ) : (
+                    <ReactMarkdown
+                      components={{
+                        p:      ({ children }) => <p className="mb-1.5 last:mb-0">{children}</p>,
+                        strong: ({ children }) => <strong className="font-semibold text-slate-900">{children}</strong>,
+                        em:     ({ children }) => <em className="italic text-slate-700">{children}</em>,
+                        ul:     ({ children }) => <ul className="list-disc list-outside pl-4 space-y-0.5 my-1.5">{children}</ul>,
+                        ol:     ({ children }) => <ol className="list-decimal list-outside pl-4 space-y-0.5 my-1.5">{children}</ol>,
+                        li:     ({ children }) => <li className="leading-relaxed">{children}</li>,
+                        h1:     ({ children }) => <h1 className="font-bold text-base mt-2 mb-1">{children}</h1>,
+                        h2:     ({ children }) => <h2 className="font-semibold text-sm mt-2 mb-0.5">{children}</h2>,
+                        h3:     ({ children }) => <h3 className="font-semibold text-sm mt-1.5 mb-0.5">{children}</h3>,
+                        code:   ({ children }) => (
+                          <code className="bg-slate-100 text-slate-700 px-1 py-0.5 rounded text-xs font-mono">
+                            {children}
+                          </code>
+                        ),
+                        pre:    ({ children }) => (
+                          <pre className="bg-slate-100 rounded-lg p-3 text-xs font-mono overflow-x-auto my-2 text-slate-700">
+                            {children}
+                          </pre>
+                        ),
+                        hr:     () => <hr className="border-slate-200 my-2" />,
+                        blockquote: ({ children }) => (
+                          <blockquote className="border-l-2 border-amber-300 pl-3 text-slate-500 italic my-1.5">
+                            {children}
+                          </blockquote>
+                        ),
+                      }}
+                    >
+                      {msg.content}
+                    </ReactMarkdown>
+                  )}
                 </div>
               </div>
             ))}
@@ -125,7 +160,7 @@ export function ChatWindow({ messages, isLoading, onSend }: ChatWindowProps) {
       </div>
 
       {/* ── Input area ───────────────────────────────────────────── */}
-      <div className="border-t border-slate-100 px-4 py-3 bg-white flex-shrink-0">
+      <div className="border-t border-slate-100 px-3 sm:px-4 py-3 bg-white flex-shrink-0">
         <div className="flex items-end gap-2">
           <textarea
             ref={textareaRef}
