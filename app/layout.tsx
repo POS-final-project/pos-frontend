@@ -16,8 +16,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "POS - Point of Sale",
-  description: "Sistem Point of Sale untuk manajemen toko",
+  title: "lihatinsales",
+  description: "Sistem manajemen ritel untuk multi-toko, transaksi, inventori, dan analitik bisnis.",
 };
 
 export default function RootLayout({

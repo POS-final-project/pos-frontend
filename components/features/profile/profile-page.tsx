@@ -353,7 +353,7 @@ export function ProfilePage() {
                     id="p-phone"
                     value={draftPhone}
                     onChange={(e) => setDraftPhone(e.target.value)}
-                    placeholder="cth. 08123456789"
+                    placeholder="Nomor telepon aktif"
                     type="tel"
                   />
                 </div>
@@ -429,7 +429,7 @@ export function ProfilePage() {
               label="Password Baru"
               value={newPassword}
               onChange={setNewPassword}
-              placeholder="Min. 8 karakter"
+              placeholder="Masukkan password baru"
               show={showNew}
               onToggleShow={() => setShowNew((v) => !v)}
               required
@@ -439,7 +439,7 @@ export function ProfilePage() {
               label="Konfirmasi Password Baru"
               value={confirmPassword}
               onChange={setConfirmPassword}
-              placeholder="Ulangi password baru"
+              placeholder="Tulis ulang password di atas"
               show={showConfirm}
               onToggleShow={() => setShowConfirm((v) => !v)}
               required

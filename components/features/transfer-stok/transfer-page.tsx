@@ -96,14 +96,11 @@ type Transfer = {
 type TransferItemApi = {
   id: string;
   product_variant_id: string;
-  ProductVariant?: {
-    id: string;
-    name: string;
-    sku?: string;
-    Product?: { id: string; name: string };
-  };
   qty: number | string;
   note?: string | null;
+  product_name?: string | null;
+  variant_name?: string | null;
+  variant_sku?: string | null;
 };
 
 type ProductVariant = { id: string; name: string; sku?: string };
@@ -148,6 +145,7 @@ export function TransferPage({ role }: TransferPageProps) {
 
   const [tab, setTab] = useState<Tab>("outgoing");
   const [shops, setShops] = useState<Shop[]>([]);
+  const [allShops, setAllShops] = useState<Shop[]>([]);
   const [selectedShopId, setSelectedShopId] = useState<string>(
     role === "superadmin" ? "" : (user?.shopId ?? ""),
   );
@@ -227,13 +225,17 @@ export function TransferPage({ role }: TransferPageProps) {
 
   const fetchShops = useCallback(async () => {
     try {
-      const res = await api.get<{ data: unknown }>(
-        "/api/shops?page=1&limit=100",
-      );
-      const list = extractList<Shop>(res.data);
+      const [ownRes, allRes] = await Promise.all([
+        api.get<{ data: unknown }>("/api/shops?page=1&limit=100"),
+        api.get<{ data: unknown }>("/api/shops?page=1&limit=100&all=1"),
+      ]);
+      const list = extractList<Shop>(ownRes.data);
+      const listAll = extractList<Shop>(allRes.data);
       setShops(list);
-      if (role === "superadmin" && !selectedShopId) {
-        // don't auto-select for superadmin — show all by default
+      setAllShops(listAll);
+      // Sync createFromShop untuk admin jika belum terisi
+      if (role === "admin" && list.length > 0) {
+        setCreateFromShop((prev) => prev || list[0].id);
       }
       return list;
     } catch {
@@ -420,7 +422,7 @@ export function TransferPage({ role }: TransferPageProps) {
   }
 
   function resetCreateForm() {
-    setCreateFromShop(role === "superadmin" ? "" : (user?.shopId ?? ""));
+    setCreateFromShop(role === "superadmin" ? "" : (shops[0]?.id ?? ""));
     setCreateToShop("");
     setCreateNote("");
     setCreateItems([]);
@@ -739,13 +741,11 @@ export function TransferPage({ role }: TransferPageProps) {
                       >
                         <div>
                           <p className="font-medium">
-                            {it.ProductVariant?.Product?.name ?? "-"}
+                            {it.product_name ?? "-"}
                           </p>
                           <p className="text-xs text-slate-500">
-                            {it.ProductVariant?.name ?? ""}{" "}
-                            {it.ProductVariant?.sku
-                              ? `· ${it.ProductVariant.sku}`
-                              : ""}
+                            {it.variant_name ?? ""}
+                            {it.variant_sku ? ` · ${it.variant_sku}` : ""}
                           </p>
                         </div>
                         <span className="font-semibold tabular-nums">
@@ -822,211 +822,276 @@ export function TransferPage({ role }: TransferPageProps) {
           setCreateOpen(open);
         }}
       >
-        <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-lg flex flex-col max-h-[90vh]">
           <DialogHeader>
             <DialogTitle>Buat Transfer Stok</DialogTitle>
           </DialogHeader>
-          <form onSubmit={handleCreate} className="space-y-5">
-            {/* From / To shop */}
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label>Dari Toko</Label>
-                {role === "superadmin" ? (
+          <form onSubmit={handleCreate} className="flex flex-col flex-1 min-h-0">
+            <div className="flex-1 overflow-y-auto space-y-5 pb-1">
+              {/* From / To shop */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label>Dari Toko</Label>
+                  {role === "superadmin" ? (
+                    <Select
+                      value={createFromShop}
+                      onValueChange={(v) => setCreateFromShop(v ?? "")}
+                    >
+                      <SelectTrigger>
+                        <span className="truncate text-sm">
+                          {createFromShop
+                            ? (shops.find((s) => s.id === createFromShop)?.name ?? createFromShop)
+                            : "Pilih toko asal..."}
+                        </span>
+                      </SelectTrigger>
+                      <SelectContent>
+                        {shops.map((s) => (
+                          <SelectItem key={s.id} value={s.id}>
+                            {s.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <div className="flex items-center gap-2 h-9 px-3 bg-slate-50 rounded-lg border border-slate-200">
+                      <span className="text-sm font-medium text-slate-700 truncate">
+                        {shops.find((s) => s.id === createFromShop)?.name ??
+                          allShops.find((s) => s.id === createFromShop)?.name ??
+                          (createFromShop || "-")}
+                      </span>
+                    </div>
+                  )}
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Ke Toko</Label>
                   <Select
-                    value={createFromShop}
-                    onValueChange={(v) => setCreateFromShop(v ?? "")}
+                    value={createToShop}
+                    onValueChange={(v) => setCreateToShop(v ?? "")}
                   >
                     <SelectTrigger>
                       <span className="truncate text-sm">
-                        {createFromShop
-                          ? (shops.find((s) => s.id === createFromShop)?.name ?? createFromShop)
-                          : "Pilih toko asal..."}
+                        {createToShop
+                          ? (allShops.find((s) => s.id === createToShop)?.name ?? createToShop)
+                          : "Pilih toko tujuan..."}
                       </span>
                     </SelectTrigger>
                     <SelectContent>
-                      {shops.map((s) => (
-                        <SelectItem key={s.id} value={s.id}>
-                          {s.name}
-                        </SelectItem>
-                      ))}
+                      {allShops
+                        .filter((s) => s.id !== createFromShop)
+                        .map((s) => (
+                          <SelectItem key={s.id} value={s.id}>
+                            {s.name}
+                          </SelectItem>
+                        ))}
                     </SelectContent>
                   </Select>
-                ) : (
-                  <p className="text-sm font-medium py-2 px-3 bg-slate-50 rounded-lg border border-slate-200">
-                    {shops.find((s) => s.id === user?.shopId)?.name ??
-                      user?.shopId ??
-                      "-"}
-                  </p>
-                )}
+                </div>
               </div>
+
               <div className="space-y-1.5">
-                <Label>Ke Toko</Label>
-                <Select
-                  value={createToShop}
-                  onValueChange={(v) => setCreateToShop(v ?? "")}
-                >
-                  <SelectTrigger>
-                    <span className="truncate text-sm">
-                      {createToShop
-                        ? (shops.find((s) => s.id === createToShop)?.name ?? createToShop)
-                        : "Pilih toko tujuan..."}
-                    </span>
-                  </SelectTrigger>
-                  <SelectContent>
-                    {shops
-                      .filter((s) => s.id !== createFromShop)
-                      .map((s) => (
-                        <SelectItem key={s.id} value={s.id}>
-                          {s.name}
-                        </SelectItem>
-                      ))}
-                  </SelectContent>
-                </Select>
+                <Label htmlFor="tr-note">Catatan Transfer (opsional)</Label>
+                <Input
+                  id="tr-note"
+                  placeholder="Tuliskan tujuan atau alasan transfer ini"
+                  value={createNote}
+                  onChange={(e) => setCreateNote(e.target.value)}
+                />
               </div>
-            </div>
 
-            <div className="space-y-1.5">
-              <Label htmlFor="tr-note">Catatan Transfer (opsional)</Label>
-              <Input
-                id="tr-note"
-                placeholder="cth. Transfer stok mingguan"
-                value={createNote}
-                onChange={(e) => setCreateNote(e.target.value)}
-              />
-            </div>
-
-            {/* Item picker */}
-            <div className="space-y-3">
-              <Label>Tambah Item</Label>
-              <div className="border border-slate-200 rounded-lg p-3 space-y-3 bg-slate-50">
-                {/* Product search */}
-                <div className="relative">
-                  <Search className="absolute left-2.5 top-2.5 w-4 h-4 text-slate-400" />
-                  <Input
-                    className="pl-8 bg-white"
-                    placeholder="Cari produk..."
-                    value={searchQuery}
-                    onChange={(e) => {
-                      setSearchQuery(e.target.value);
-                      setSelectedProduct(null);
-                      setSelectedVariantId("");
-                    }}
-                  />
+              {/* Item picker */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <Label>Daftar Item</Label>
+                  {createItems.length > 0 && (
+                    <span className="text-xs font-medium bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">
+                      {createItems.length} item
+                    </span>
+                  )}
                 </div>
 
-                {/* Search results dropdown */}
-                {!selectedProduct && searchResults.length > 0 && (
-                  <div className="bg-white border border-slate-200 rounded-lg shadow-sm max-h-52 overflow-y-auto">
-                    {searchLoading ? (
-                      <p className="text-sm text-slate-400 px-3 py-2">Mencari...</p>
-                    ) : (
-                      searchResults.map((p) => (
+                {/* Draft items list */}
+                {createItems.length > 0 && (
+                  <div className="space-y-1.5">
+                    {createItems.map((it) => (
+                      <div
+                        key={it.variantId}
+                        className="flex items-center justify-between text-sm bg-white border border-slate-200 px-3 py-2.5 rounded-lg"
+                      >
+                        <div className="min-w-0 flex-1">
+                          <p className="font-medium truncate">{it.productName}</p>
+                          <p className="text-xs text-slate-500 truncate">
+                            {it.variantName}
+                            {it.note ? ` · ${it.note}` : ""}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-3 ml-3 shrink-0">
+                          <span className="font-semibold tabular-nums text-slate-700">
+                            {it.qty} pcs
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => removeDraftItem(it.variantId)}
+                            className="text-slate-300 hover:text-red-500 transition-colors"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Picker panel */}
+                <div className="border border-dashed border-slate-300 rounded-lg p-3 space-y-3 bg-slate-50/60">
+                  <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide">
+                    Tambah item
+                  </p>
+
+                  {/* Step 1: Product search */}
+                  <div className="space-y-1">
+                    <p className="text-[11px] text-slate-400">1 — Cari produk</p>
+                    <div className="relative">
+                      <Search className="absolute left-2.5 top-2.5 w-4 h-4 text-slate-400" />
+                      <Input
+                        className="pl-8 bg-white"
+                        placeholder="Ketik nama produk"
+                        value={searchQuery}
+                        onChange={(e) => {
+                          setSearchQuery(e.target.value);
+                          setSelectedProduct(null);
+                          setSelectedVariantId("");
+                        }}
+                      />
+                    </div>
+
+                    {/* Search results */}
+                    {!selectedProduct && (searchResults.length > 0 || searchLoading) && (
+                      <div className="bg-white border border-slate-200 rounded-lg shadow-sm max-h-44 overflow-y-auto">
+                        {searchLoading ? (
+                          <p className="text-sm text-slate-400 px-3 py-2.5">Mencari...</p>
+                        ) : (
+                          searchResults.map((p) => (
+                            <button
+                              key={p.id}
+                              type="button"
+                              className="w-full text-left px-3 py-2 text-sm hover:bg-amber-50 hover:text-amber-700 transition-colors border-b border-slate-100 last:border-0"
+                              onClick={() => {
+                                setSelectedProduct(p);
+                                setSearchQuery(p.name);
+                                setSelectedVariantId(
+                                  p.variants?.length === 1 ? p.variants[0].id : "",
+                                );
+                              }}
+                            >
+                              {p.name}
+                              {p.variants && p.variants.length > 1 && (
+                                <span className="text-xs text-slate-400 ml-1.5">
+                                  {p.variants.length} varian
+                                </span>
+                              )}
+                            </button>
+                          ))
+                        )}
+                      </div>
+                    )}
+
+                    {/* Selected product chip */}
+                    {selectedProduct && (
+                      <div className="flex items-center gap-2 px-3 py-1.5 bg-amber-50 border border-amber-200 rounded-lg">
+                        <span className="text-xs font-medium text-amber-800 flex-1 truncate">
+                          {selectedProduct.name}
+                        </span>
+                        {selectedProduct.variants?.length === 1 && (
+                          <span className="text-[10px] text-amber-600 shrink-0">
+                            {selectedProduct.variants[0].name}
+                          </span>
+                        )}
                         <button
-                          key={p.id}
                           type="button"
-                          className="w-full text-left px-3 py-2 text-sm hover:bg-amber-50 hover:text-amber-700 transition-colors"
                           onClick={() => {
-                            setSelectedProduct(p);
-                            setSearchQuery(p.name);
-                            setSelectedVariantId(
-                              p.variants?.length === 1 ? p.variants[0].id : "",
-                            );
+                            setSelectedProduct(null);
+                            setSelectedVariantId("");
+                            setSearchQuery("");
                           }}
+                          className="text-amber-400 hover:text-amber-700 transition-colors shrink-0"
                         >
-                          {p.name}
+                          <X className="w-3.5 h-3.5" />
                         </button>
-                      ))
+                      </div>
                     )}
                   </div>
-                )}
 
-                {/* Variant select */}
-                {selectedProduct && selectedProduct.variants && selectedProduct.variants.length > 1 && (
-                  <Select
-                    value={selectedVariantId}
-                    onValueChange={(v) => setSelectedVariantId(v ?? "")}
-                  >
-                    <SelectTrigger className="bg-white">
-                      <SelectValue placeholder="Pilih varian..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {selectedProduct.variants.map((v) => (
-                        <SelectItem key={v.id} value={v.id}>
-                          {v.name} {v.sku ? `(${v.sku})` : ""}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
+                  {/* Step 2: Variant select (only if >1 variant) */}
+                  {selectedProduct && selectedProduct.variants && selectedProduct.variants.length > 1 && (
+                    <div className="space-y-1">
+                      <p className="text-[11px] text-slate-400">2 — Pilih varian</p>
+                      <Select
+                        value={selectedVariantId}
+                        onValueChange={(v) => setSelectedVariantId(v ?? "")}
+                      >
+                        <SelectTrigger className="bg-white">
+                          <span className="truncate text-sm">
+                            {selectedVariantId
+                              ? (() => {
+                                  const v = selectedProduct.variants?.find(x => x.id === selectedVariantId);
+                                  return v ? `${v.name}${v.sku ? ` (${v.sku})` : ""}` : "Pilih varian...";
+                                })()
+                              : "Pilih varian..."}
+                          </span>
+                        </SelectTrigger>
+                        <SelectContent>
+                          {selectedProduct.variants.map((v) => (
+                            <SelectItem key={v.id} value={v.id}>
+                              {v.name} {v.sku ? `(${v.sku})` : ""}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
 
-                {/* Qty + item note row */}
-                <div className="flex gap-2">
-                  <div className="w-24">
-                    <Input
-                      type="number"
-                      min="1"
-                      placeholder="Qty"
-                      className="bg-white"
-                      value={itemQty}
-                      onChange={(e) => setItemQty(e.target.value)}
-                    />
+                  {/* Step 3: Qty + note + add button */}
+                  <div className="space-y-1">
+                    <p className="text-[11px] text-slate-400">
+                      {selectedProduct?.variants && selectedProduct.variants.length > 1 ? "3" : "2"} — Jumlah &amp; catatan
+                    </p>
+                    <div className="flex gap-2">
+                      <Input
+                        type="number"
+                        min="1"
+                        placeholder="Jumlah"
+                        className="bg-white w-24 shrink-0"
+                        value={itemQty}
+                        onChange={(e) => setItemQty(e.target.value)}
+                      />
+                      <Input
+                        placeholder="Catatan item (opsional)"
+                        className="bg-white flex-1"
+                        value={itemNote}
+                        onChange={(e) => setItemNote(e.target.value)}
+                      />
+                    </div>
                   </div>
-                  <Input
-                    placeholder="Catatan item (opsional)"
-                    className="bg-white flex-1"
-                    value={itemNote}
-                    onChange={(e) => setItemNote(e.target.value)}
-                  />
+
                   <Button
                     type="button"
                     variant="outline"
-                    className="shrink-0"
+                    className="w-full gap-2 border-amber-300 text-amber-700 hover:bg-amber-50 hover:border-amber-400 bg-white"
                     disabled={!selectedProduct || !selectedVariantId || Number(itemQty) < 1}
                     onClick={addDraftItem}
                   >
                     <Plus className="w-4 h-4" />
+                    Tambahkan ke Daftar
                   </Button>
                 </div>
               </div>
-
-              {/* Draft items list */}
-              {createItems.length > 0 && (
-                <div className="space-y-1.5">
-                  {createItems.map((it) => (
-                    <div
-                      key={it.variantId}
-                      className="flex items-center justify-between text-sm bg-white border border-slate-200 px-3 py-2 rounded-lg"
-                    >
-                      <div>
-                        <p className="font-medium">{it.productName}</p>
-                        <p className="text-xs text-slate-500">
-                          {it.variantName}
-                          {it.note ? ` · ${it.note}` : ""}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="font-semibold tabular-nums">
-                          {it.qty} pcs
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => removeDraftItem(it.variantId)}
-                          className="text-slate-400 hover:text-red-500 transition-colors"
-                        >
-                          <X className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
             </div>
 
             {createError && (
-              <p className="text-sm text-red-600">{createError}</p>
+              <p className="text-sm text-red-600 pt-2">{createError}</p>
             )}
 
-            <DialogFooter>
+            <DialogFooter className="pt-4 mt-2">
               <Button
                 type="button"
                 variant="outline"
@@ -1042,7 +1107,11 @@ export function TransferPage({ role }: TransferPageProps) {
                 type="submit"
                 disabled={createLoading || createItems.length === 0}
               >
-                {createLoading ? "Memproses..." : "Buat Transfer"}
+                {createLoading
+                  ? "Memproses..."
+                  : createItems.length > 0
+                    ? `Buat Transfer (${createItems.length} item)`
+                    : "Buat Transfer"}
               </Button>
             </DialogFooter>
           </form>

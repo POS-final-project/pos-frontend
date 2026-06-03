@@ -3,7 +3,9 @@
     "allow": [
       "Bash(xargs grep *)",
       "Skill(frontend-design:frontend-design)",
-      "Bash(npm run *)"
+      "Bash(npm run *)",
+      "Read(//e/Coding/TA/POS/backend/**)",
+      "Bash(node -e ' *)"
     ]
   }
 }

@@ -400,7 +400,7 @@ export function TokoPage({ role }: TokoPageProps) {
               <Label htmlFor="s-name">Nama Toko</Label>
               <Input
                 id="s-name"
-                placeholder="cth. Toko Cabang A"
+                placeholder="Nama toko yang mudah dikenali"
                 value={formName}
                 onChange={(e) => setFormName(e.target.value)}
                 required
@@ -411,7 +411,7 @@ export function TokoPage({ role }: TokoPageProps) {
               <Label htmlFor="s-addr">Alamat</Label>
               <Input
                 id="s-addr"
-                placeholder="cth. Jl. Merdeka No. 1"
+                placeholder="Alamat lengkap toko"
                 value={formAddress}
                 onChange={(e) => setFormAddress(e.target.value)}
               />
@@ -420,7 +420,7 @@ export function TokoPage({ role }: TokoPageProps) {
               <Label htmlFor="s-phone">Nomor Telepon</Label>
               <Input
                 id="s-phone"
-                placeholder="cth. 02112345678"
+                placeholder="Nomor telepon toko"
                 value={formPhone}
                 onChange={(e) => setFormPhone(e.target.value)}
               />

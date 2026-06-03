@@ -35,6 +35,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { DatePicker } from "@/components/ui/date-picker";
 import { cn } from "@/lib/utils";
 import { api } from "@/lib/api";
 import { getUser } from "@/lib/auth";
@@ -499,20 +500,20 @@ export function TransaksiPage({ role }: TransaksiPageProps) {
           {/* Date range */}
           <div className="flex flex-col gap-1">
             <span className="text-xs font-medium text-slate-500">Dari</span>
-            <Input
-              type="date"
-              className="h-9 text-sm w-38"
+            <DatePicker
               value={filterDateFrom}
-              onChange={(e) => setFilterDateFrom(e.target.value)}
+              onChange={setFilterDateFrom}
+              placeholder="Dari tanggal"
+              className="w-40"
             />
           </div>
           <div className="flex flex-col gap-1">
             <span className="text-xs font-medium text-slate-500">Sampai</span>
-            <Input
-              type="date"
-              className="h-9 text-sm w-38"
+            <DatePicker
               value={filterDateTo}
-              onChange={(e) => setFilterDateTo(e.target.value)}
+              onChange={setFilterDateTo}
+              placeholder="Sampai tanggal"
+              className="w-40"
             />
           </div>
 

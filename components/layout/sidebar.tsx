@@ -20,13 +20,11 @@ import {
   Bot,
   Bell,
   FileText,
-  BarChart3,
   User,
   X,
   ChevronRight,
   Layers,
   ShoppingBag,
-  TrendingUp,
   Settings,
   Archive,
 } from "lucide-react";
@@ -90,15 +88,7 @@ const SUPERADMIN_NAV: NavEntry[] = [
       { title: "Refund", href: "/superadmin/refund", icon: RotateCcw },
     ],
   },
-  {
-    type: "group",
-    label: "Analitik",
-    groupIcon: TrendingUp,
-    items: [
-      { title: "Laporan", href: "/superadmin/laporan", icon: BarChart3 },
-      { title: "AI Assistant", href: "/superadmin/ai", icon: Bot },
-    ],
-  },
+  { type: "item", title: "AI Assistant", href: "/superadmin/ai", icon: Bot },
   {
     type: "group",
     label: "Sistem",
@@ -108,7 +98,7 @@ const SUPERADMIN_NAV: NavEntry[] = [
       { title: "Log & Audit", href: "/superadmin/log-audit", icon: FileText },
     ],
   },
-  { type: "item", title: "Profile", href: "/superadmin/profile", icon: User },
+  // { type: "item", title: "Profile", href: "/superadmin/profile", icon: User },
 ];
 
 const ADMIN_NAV: NavEntry[] = [
@@ -147,22 +137,14 @@ const ADMIN_NAV: NavEntry[] = [
       { title: "Refund", href: "/admin/refund", icon: RotateCcw },
     ],
   },
-  {
-    type: "group",
-    label: "Analitik",
-    groupIcon: TrendingUp,
-    items: [
-      { title: "Laporan", href: "/admin/laporan", icon: BarChart3 },
-      { title: "AI Assistant", href: "/admin/ai", icon: Bot },
-    ],
-  },
+  { type: "item", title: "AI Assistant", href: "/admin/ai", icon: Bot },
   {
     type: "group",
     label: "Sistem",
     groupIcon: Settings,
     items: [{ title: "Notifikasi", href: "/admin/notifikasi", icon: Bell }],
   },
-  { type: "item", title: "Profile", href: "/admin/profile", icon: User },
+  // { type: "item", title: "Profile", href: "/admin/profile", icon: User },
 ];
 
 // User/Kasir: cukup sedikit item, tidak perlu dikelompokkan
@@ -177,7 +159,7 @@ const USER_NAV: NavEntry[] = [
     href: "/user/inventory",
     icon: Warehouse,
   },
-  { type: "item", title: "Profile", href: "/user/profile", icon: User },
+  // { type: "item", title: "Profile", href: "/user/profile", icon: User },
 ];
 
 function isStandaloneActive(href: string, pathname: string): boolean {
@@ -282,7 +264,6 @@ const DEFAULT_OPEN: Record<string, boolean> = {
   Manajemen: true,
   Inventori: false,
   "Transaksi & Kasir": false,
-  Analitik: false,
   Sistem: false,
 };
 
@@ -348,11 +329,22 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
         ? "bg-orange-500/20 text-orange-300 ring-1 ring-orange-500/30"
         : "bg-white/10 text-slate-400 ring-1 ring-white/15";
 
-  const displayName = authUser?.name ?? (role === "superadmin" ? "Super Admin" : role === "admin" ? "Admin Toko" : "Kasir");
+  const displayName =
+    authUser?.name ??
+    (role === "superadmin"
+      ? "Super Admin"
+      : role === "admin"
+        ? "Admin Toko"
+        : "Kasir");
   const displayEmail = authUser?.email ?? "";
 
   function getInitials(name: string) {
-    return name.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase();
+    return name
+      .split(" ")
+      .map((n) => n[0])
+      .join("")
+      .slice(0, 2)
+      .toUpperCase();
   }
 
   return (
@@ -368,14 +360,17 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     >
       {/* Brand */}
       <div className="flex items-center gap-3 px-5 py-5 border-b border-white/8 flex-shrink-0">
-        <div className="w-9 h-9 rounded-xl bg-amber-500 flex items-center justify-center flex-shrink-0">
-          <ShoppingCart className="w-5 h-5 text-amber-950" />
-        </div>
+        <img src="/icon.png" alt="lihatinsales" className="w-9 h-9 rounded-xl flex-shrink-0 object-cover" />
         <div className="flex-1 min-w-0">
           <p className="font-bold text-white text-sm leading-tight truncate tracking-wide">
-            Point of Sale
+            lihatinsales
           </p>
-          <p className={cn("text-[10px] font-medium leading-tight mt-0.5 px-1.5 py-0.5 rounded-full w-fit", roleBadgeClass)}>
+          <p
+            className={cn(
+              "text-[10px] font-medium leading-tight mt-0.5 px-1.5 py-0.5 rounded-full w-fit",
+              roleBadgeClass,
+            )}
+          >
             {roleLabel}
           </p>
         </div>
@@ -429,7 +424,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
       </nav>
 
       {/* Footer — user info */}
-      <div className="px-3 py-3 border-t border-white/8 flex-shrink-0">
+      {/* <div className="px-3 py-3 border-t border-white/8 flex-shrink-0">
         <div className="flex items-center gap-2.5 px-2 py-2 rounded-lg hover:bg-white/8 transition-colors cursor-default">
           <div className="w-8 h-8 rounded-full bg-amber-500 flex items-center justify-center flex-shrink-0 text-xs font-bold text-amber-950">
             {getInitials(displayName)}
@@ -443,7 +438,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
             </p>
           </div>
         </div>
-      </div>
+      </div> */}
     </aside>
   );
 }

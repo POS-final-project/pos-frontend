@@ -228,7 +228,7 @@ export function RefundPage({ role }: RefundPageProps) {
     setTxSearchLoading(true);
     setTxSearchError("");
     try {
-      const res = await api.get<{ data: unknown }>(`/api/transactions/${id}`);
+      const res = await api.get<{ data: unknown }>(`/api/transactions/invoice/${encodeURIComponent(id)}`);
       const tx = (res.data as Record<string, unknown>).data as Transaction;
       if (tx.status !== "selesai") {
         setTxSearchError("Hanya transaksi yang sudah selesai yang dapat direfund");
@@ -262,7 +262,7 @@ export function RefundPage({ role }: RefundPageProps) {
     setCreateError("");
     try {
       await api.post("/api/refunds", {
-        transaction_id: foundTx.id,
+        invoice_no: foundTx.invoice_no,
         reason: refundReason.trim() || undefined,
         items,
       });
@@ -524,12 +524,12 @@ export function RefundPage({ role }: RefundPageProps) {
             <form onSubmit={handleSearchTx} className="space-y-4">
               <div className="space-y-1.5">
                 <Label htmlFor="tx-id">
-                  ID Transaksi <span className="text-red-500">*</span>
+                  Nomor Invoice <span className="text-red-500">*</span>
                 </Label>
                 <div className="flex gap-2">
                   <Input
                     id="tx-id"
-                    placeholder="Masukkan ID transaksi (UUID)..."
+                    placeholder="Ketik nomor invoice dari struk"
                     value={txIdInput}
                     onChange={(e) => { setTxIdInput(e.target.value); setTxSearchError(""); }}
                     className="font-mono text-sm"
@@ -541,7 +541,7 @@ export function RefundPage({ role }: RefundPageProps) {
                   </Button>
                 </div>
                 <p className="text-xs text-slate-400">
-                  Salin ID dari halaman Transaksi. Hanya transaksi berstatus <strong>Selesai</strong> yang dapat direfund.
+                  Masukkan nomor invoice dari struk atau halaman Transaksi. Hanya transaksi berstatus <strong>Selesai</strong> yang dapat direfund.
                 </p>
               </div>
               {txSearchError && (
@@ -625,7 +625,7 @@ export function RefundPage({ role }: RefundPageProps) {
                 </Label>
                 <Input
                   id="reason"
-                  placeholder="cth. Barang cacat, salah ukuran..."
+                  placeholder="Jelaskan alasan pengembalian barang"
                   value={refundReason}
                   onChange={(e) => setRefundReason(e.target.value)}
                 />

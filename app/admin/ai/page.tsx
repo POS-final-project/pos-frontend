@@ -1,5 +1,9 @@
-import { ComingSoon } from "@/components/coming-soon";
+import { ChatPage } from "@/components/features/chat/chat-page";
 
 export default function Page() {
-  return <ComingSoon title="AI Assistant" />;
+  return (
+    <div className="h-full">
+      <ChatPage />
+    </div>
+  );
 }

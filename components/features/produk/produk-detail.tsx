@@ -427,7 +427,7 @@ export function ProdukDetail({
                 Nama Variant <span className="text-red-500">*</span>
               </Label>
               <Input
-                placeholder="cth. Large / Merah / 500ml"
+                placeholder="Nama varian, misal: Large, Merah, atau 500ml"
                 value={vName}
                 onChange={(e) => setVName(e.target.value)}
                 required
@@ -441,7 +441,7 @@ export function ProdukDetail({
                   SKU <span className="text-red-500">*</span>
                 </Label>
                 <Input
-                  placeholder="cth. PROD-LG"
+                  placeholder="Kode unik untuk varian ini"
                   value={vSku}
                   onChange={(e) => setVSku(e.target.value)}
                   required
@@ -453,7 +453,7 @@ export function ProdukDetail({
                 </Label>
                 <Input
                   type="number"
-                  placeholder="0"
+                  placeholder="Harga jual dalam rupiah"
                   value={vPrice}
                   onChange={(e) => setVPrice(e.target.value)}
                   required
@@ -528,7 +528,7 @@ export function ProdukDetail({
                   Nama Variant <span className="text-red-500">*</span>
                 </Label>
                 <Input
-                  placeholder="cth. Default"
+                  placeholder="Nama varian, misal: 600ml atau Merah"
                   value={evName}
                   onChange={(e) => setEvName(e.target.value)}
                   required
@@ -541,7 +541,7 @@ export function ProdukDetail({
                 </Label>
                 <Input
                   type="number"
-                  placeholder="0"
+                  placeholder="Harga jual dalam rupiah"
                   value={evPrice}
                   onChange={(e) => setEvPrice(e.target.value)}
                   required

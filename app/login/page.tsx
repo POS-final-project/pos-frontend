@@ -1,23 +1,4 @@
-import { ShoppingCart, Zap, BarChart3, Boxes } from "lucide-react";
 import { LoginForm } from "./login-form";
-
-const FEATURES = [
-  {
-    icon: Boxes,
-    label: "Multi-Toko",
-    desc: "Kelola semua toko dari satu dasbor",
-  },
-  {
-    icon: BarChart3,
-    label: "Analitik Real-time",
-    desc: "Laporan penjualan & inventori langsung",
-  },
-  {
-    icon: Zap,
-    label: "AI Assistant",
-    desc: "Insight bisnis berbasis kecerdasan buatan",
-  },
-];
 
 export default function LoginPage() {
   return (
@@ -31,20 +12,16 @@ export default function LoginPage() {
         <div className="relative z-10 flex flex-col h-full px-10 py-10">
           {/* Brand mark */}
           <div className="flex items-center gap-3">
-            <div
-              className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
-              style={{ background: "oklch(0.72 0.19 48)" }}
-            >
-              <ShoppingCart
-                className="w-[18px] h-[18px]"
-                style={{ color: "oklch(0.13 0.03 48)" }}
-              />
-            </div>
+            <img
+              src="/icon.png"
+              alt="lihatinsales"
+              className="w-9 h-9 rounded-xl object-cover flex-shrink-0"
+            />
             <span
-              className="font-semibold text-sm tracking-wide"
+              className="font-semibold text-lg tracking-wide"
               style={{ color: "oklch(0.88 0.006 80)" }}
             >
-              Point of Sale
+              lihatinsales
             </span>
           </div>
 
@@ -54,7 +31,7 @@ export default function LoginPage() {
               className="text-[11px] font-bold tracking-[0.22em] uppercase mb-5"
               style={{ color: "oklch(0.72 0.19 48)" }}
             >
-              Sistem Manajemen Ritel
+              Sistem Manajemen Terintegrasi
             </p>
             <h1
               className="font-extrabold leading-[1.07] mb-5"
@@ -80,8 +57,7 @@ export default function LoginPage() {
 
           {/* Footer */}
           <p className="text-[11px]" style={{ color: "oklch(0.38 0.008 260)" }}>
-            &copy; {new Date().getFullYear()} Point of Sale. All rights
-            reserved.
+            &copy; {new Date().getFullYear()} lihatinsales. All rights reserved.
           </p>
         </div>
       </div>
@@ -94,20 +70,16 @@ export default function LoginPage() {
         <div className="w-full max-w-[360px]">
           {/* Mobile logo */}
           <div className="flex items-center gap-2.5 mb-10 lg:hidden">
-            <div
-              className="w-9 h-9 rounded-xl flex items-center justify-center"
-              style={{ background: "oklch(0.72 0.19 48)" }}
-            >
-              <ShoppingCart
-                className="w-[18px] h-[18px]"
-                style={{ color: "oklch(0.13 0.03 48)" }}
-              />
-            </div>
+            <img
+              src="/icon.png"
+              alt="lihatinsales"
+              className="w-9 h-9 rounded-xl object-cover flex-shrink-0"
+            />
             <span
               className="font-bold text-base"
               style={{ color: "oklch(0.13 0.025 260)" }}
             >
-              Point of Sale
+              lihatinsales
             </span>
           </div>
 
@@ -148,7 +120,7 @@ export default function LoginPage() {
             className="animate-fade-up text-center text-[11px] mt-10"
             style={{ color: "oklch(0.62 0.006 260)", animationDelay: "240ms" }}
           >
-            Point of Sale &copy; {new Date().getFullYear()}
+            lihatinsales &copy; {new Date().getFullYear()}
           </p>
         </div>
       </div>

@@ -41,12 +41,21 @@ const PAGE_TITLES: Record<string, string> = {
   inventory: "Inventory", "transfer-stok": "Transfer Stok", kasir: "Kasir",
   refund: "Refund", toko: "Toko", pelanggan: "Pelanggan",
   ai: "AI Assistant", notifikasi: "Notifikasi",
-  "log-audit": "Log & Audit", laporan: "Laporan", profile: "Profile", pengguna: "Pengguna",
+  "log-audit": "Log & Audit", profile: "Profile", pengguna: "Pengguna",
 };
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 function getPageTitle(pathname: string): string {
   const segments = pathname.split("/").filter(Boolean);
-  return PAGE_TITLES[segments[segments.length - 1]] ?? "Dashboard";
+  const last = segments[segments.length - 1];
+
+  if (UUID_RE.test(last) && segments.length >= 2) {
+    const parent = PAGE_TITLES[segments[segments.length - 2]];
+    if (parent) return `Detail ${parent}`;
+  }
+
+  return PAGE_TITLES[last] ?? "Dashboard";
 }
 
 function getInitials(name: string): string {

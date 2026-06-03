@@ -653,7 +653,7 @@ export function ProdukPage({ canEdit = true }: ProdukPageProps) {
                 </Label>
                 <Input
                   id="p-name"
-                  placeholder="cth. Aqua 600ml"
+                  placeholder="Nama produk yang dijual"
                   value={formName}
                   onChange={(e) => setFormName(e.target.value)}
                   required
@@ -668,7 +668,7 @@ export function ProdukPage({ canEdit = true }: ProdukPageProps) {
                 </Label>
                 <Input
                   id="p-desc"
-                  placeholder="Deskripsi singkat produk"
+                  placeholder="Keterangan tambahan tentang produk ini"
                   value={formDesc}
                   onChange={(e) => setFormDesc(e.target.value)}
                 />
@@ -774,7 +774,7 @@ export function ProdukPage({ canEdit = true }: ProdukPageProps) {
                             <div className="space-y-1">
                               <Label className="text-[11px] text-slate-500">Nama Variant</Label>
                               <Input
-                                placeholder="cth. Default"
+                                placeholder="Nama varian, misal: 600ml"
                                 value={v.name}
                                 onChange={(e) => updateVariantRow(i, "name", e.target.value)}
                                 className="h-8 text-sm"
@@ -784,7 +784,7 @@ export function ProdukPage({ canEdit = true }: ProdukPageProps) {
                               <Label className="text-[11px] text-slate-500">Harga (Rp)</Label>
                               <Input
                                 type="number"
-                                placeholder="3000"
+                                placeholder="Harga jual"
                                 value={v.price}
                                 onChange={(e) => updateVariantRow(i, "price", e.target.value)}
                                 className="h-8 text-sm"
@@ -808,7 +808,7 @@ export function ProdukPage({ canEdit = true }: ProdukPageProps) {
                           <div className="space-y-1">
                             <Label className="text-[11px] text-slate-500">SKU</Label>
                             <Input
-                              placeholder="AQU-DEF"
+                              placeholder="Kode unik SKU"
                               value={v.sku}
                               onChange={(e) => updateVariantRow(i, "sku", e.target.value)}
                               className="h-7 text-xs"
@@ -820,7 +820,7 @@ export function ProdukPage({ canEdit = true }: ProdukPageProps) {
                               <ScanBarcode className="w-2.5 h-2.5 text-slate-400" />
                             </Label>
                             <Input
-                              placeholder="8991234..."
+                              placeholder="Scan atau ketik barcode"
                               value={v.barcode}
                               onChange={(e) => updateVariantRow(i, "barcode", e.target.value)}
                               onKeyDown={(e) => { if (e.key === "Enter") e.preventDefault(); }}
@@ -889,7 +889,7 @@ export function ProdukPage({ canEdit = true }: ProdukPageProps) {
                 Nama Variant <span className="text-red-500">*</span>
               </Label>
               <Input
-                placeholder="cth. Large / Merah / 500ml"
+                placeholder="Nama varian, misal: Large, Merah, atau 500ml"
                 value={variantForm.name}
                 onChange={(e) =>
                   setVariantForm((v) => ({ ...v, name: e.target.value }))
@@ -905,7 +905,7 @@ export function ProdukPage({ canEdit = true }: ProdukPageProps) {
                   SKU <span className="text-red-500">*</span>
                 </Label>
                 <Input
-                  placeholder="AQU-600-LG"
+                  placeholder="Kode unik untuk varian ini"
                   value={variantForm.sku}
                   onChange={(e) =>
                     setVariantForm((v) => ({ ...v, sku: e.target.value }))
@@ -919,7 +919,7 @@ export function ProdukPage({ canEdit = true }: ProdukPageProps) {
                 </Label>
                 <Input
                   type="number"
-                  placeholder="0"
+                  placeholder="Harga jual dalam rupiah"
                   value={variantForm.price}
                   onChange={(e) =>
                     setVariantForm((v) => ({ ...v, price: e.target.value }))
