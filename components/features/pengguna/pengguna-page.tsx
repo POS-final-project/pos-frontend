@@ -46,6 +46,7 @@ type UserItem = {
   image_url?: string | null;
   is_active: boolean;
   created_at: string;
+  shopId?: string | null;
 };
 
 type PaginatedResponse = {
@@ -148,6 +149,7 @@ export function PenggunaPage() {
   const [formPhone, setFormPhone] = useState("");
   const [formRole, setFormRole] = useState("");
   const [formActive, setFormActive] = useState(true);
+  const [formShopId, setFormShopId] = useState("");
   const [formLoading, setFormLoading] = useState(false);
   const [formError, setFormError] = useState("");
 
@@ -251,6 +253,7 @@ export function PenggunaPage() {
     setFormPhone(u.phone ?? "");
     setFormRole(u.role);
     setFormActive(u.is_active);
+    setFormShopId(u.shopId ?? "");
     setFormError("");
     setEditDialog(true);
   }
@@ -266,6 +269,7 @@ export function PenggunaPage() {
         phone: formPhone || undefined,
         role: formRole,
         is_active: formActive,
+        shopId: formShopId || null,
       });
       toast({ title: "Data pengguna diperbarui", variant: "success" });
       setEditDialog(false);
@@ -586,7 +590,7 @@ export function PenggunaPage() {
 
       {/* Edit Dialog */}
       <Dialog open={editDialog} onOpenChange={setEditDialog}>
-        <DialogContent className="sm:max-w-sm">
+        <DialogContent className="sm:max-w-sm overflow-y-auto max-h-[90vh]">
           <DialogHeader>
             <DialogTitle>Edit Pengguna</DialogTitle>
           </DialogHeader>
@@ -665,6 +669,30 @@ export function PenggunaPage() {
                   Nonaktif
                 </button>
               </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label>
+                Toko
+                <span className="ml-1 text-slate-400 font-normal text-xs">(opsional)</span>
+              </Label>
+              <Select value={formShopId} onValueChange={(v) => setFormShopId(v ?? "")}>
+                <SelectTrigger>
+                  <span className="truncate text-sm">
+                    {formShopId
+                      ? (shops.find((s) => s.id === formShopId)?.name ?? "Pilih toko...")
+                      : "Tanpa toko"}
+                  </span>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Tanpa toko</SelectItem>
+                  {shops.map((s) => (
+                    <SelectItem key={s.id} value={s.id}>
+                      {s.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             {formError && (
