@@ -8,6 +8,7 @@ import { NewSessionModal } from "./new-session-modal";
 import { aiChatApi, type AiSession, type QueryResult, type AiMessage } from "@/lib/aiChat";
 import { api } from "@/lib/api";
 import { getUser } from "@/lib/auth";
+import { getCookie, setCookie, removeCookie } from "@/lib/cookies";
 
 type Shop = { id: string; name: string };
 
@@ -123,6 +124,8 @@ export function ChatPage() {
   const [shops, setShops] = useState<Shop[]>([]);
   const [sessionsLoading, setSessionsLoading] = useState(true);
 
+  const ACTIVE_SESSION_KEY = `ai_active_session_${currentUser?.id ?? "guest"}`;
+
   useEffect(() => {
     async function init() {
       try {
@@ -132,8 +135,14 @@ export function ChatPage() {
             "/api/shops?page=1&limit=100",
           ),
         ]);
-        setSessions(sessRes.data ?? []);
+        const fetchedSessions = sessRes.data ?? [];
+        setSessions(fetchedSessions);
         setShops(shopRes.data ?? []);
+
+        const savedId = getCookie(ACTIVE_SESSION_KEY);
+        if (savedId && fetchedSessions.some((s) => s.id === savedId)) {
+          await selectSession(savedId);
+        }
       } catch {
         // silently fail — user can still create sessions
       } finally {
@@ -141,6 +150,7 @@ export function ChatPage() {
       }
     }
     init();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function selectSession(id: string) {
@@ -150,6 +160,7 @@ export function ChatPage() {
       const res = await aiChatApi.getSession(id);
       const session = res.data;
       setActiveSession(session);
+      setCookie(ACTIVE_SESSION_KEY, id);
 
       const displayed: ChatMessage[] = session.messages.map((m) => {
         const { content, queries } = parseAssistantMessage(m);
@@ -178,6 +189,7 @@ export function ChatPage() {
       const newSession = res.data;
       setSessions((prev) => [newSession, ...prev]);
       setActiveSession(newSession);
+      setCookie(ACTIVE_SESSION_KEY, newSession.id);
       setMessages([]);
       setError(null);
     } catch (err) {
@@ -192,6 +204,7 @@ export function ChatPage() {
       if (activeSession?.id === id) {
         setActiveSession(null);
         setMessages([]);
+        removeCookie(ACTIVE_SESSION_KEY);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Gagal menghapus sesi");
